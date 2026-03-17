@@ -4,12 +4,7 @@ const mysql   = require("mysql2/promise");
 const cors    = require("cors");
 
 const app = express();
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://192.168.1.9:3000"
-  ]
-}));
+app.use(cors());
 app.use(express.json());
 
 // ── Pool de conexión ───────────────────────────────────────────
