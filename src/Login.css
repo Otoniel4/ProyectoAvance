@@ -1,23 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
-/* ─── Variables ──────────────────────────────────────────────── */
 :root {
   --navy:         #1e3a5f;
   --navy-mid:     #1d3d6b;
-  --white:       #ffffff;
-  --gray-100:    #f4f6f9;
-  --gray-200:    #e8ecf2;
-  --gray-400:    #9aa5b4;
-  --text:        #1a202c;
-  --radius-card: 16px;
-  --radius-btn:  10px;
-  --radius-input:10px;
-  --shadow-card: 0 20px 60px rgba(30, 58, 95, 0.18),
-                 0  4px 16px rgba(30, 58, 95, 0.10);
-  --transition:  0.2s ease;
+  --white:        #ffffff;
+  --gray-100:     #f0f2f5;
+  --gray-200:     #e2e6ed;
+  --gray-400:     #9aa5b4;
+  --text:         #1a202c;
+  --radius-card:  18px;
+  --radius-input: 10px;
+  --radius-btn:   10px;
+  --shadow-card:  0 24px 64px rgba(30,58,95,0.16), 0 4px 16px rgba(30,58,95,0.08);
+  --transition:   0.2s ease;
 }
 
-/* ─── Page background ────────────────────────────────────────── */
 .page-bg {
   min-height: 100vh;
   display: flex;
@@ -25,74 +22,63 @@
   justify-content: center;
   padding: 24px;
   background: var(--gray-100);
-  background-image: radial-gradient(
-    ellipse 70% 60% at 50% 40%,
-    rgba(30, 58, 95, 0.08) 0%,
-    transparent 70%
-  );
+  background-image: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(30,58,95,0.07) 0%, transparent 70%);
+  font-family: 'DM Sans', sans-serif;
 }
 
-/* ─── Card ───────────────────────────────────────────────────── */
 .card {
   background: var(--white);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   width: 100%;
-  max-width: 420px;
+  max-width: 430px;
   overflow: hidden;
-  animation: cardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: cardIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
 }
 
 @keyframes cardIn {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ─── Header ─────────────────────────────────────────────────── */
 .card__header {
   background: var(--navy-mid);
   background-image:
-    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.07) 0%, transparent 50%),
-    radial-gradient(circle at 20% 80%, rgba(0,0,0,0.08)       0%, transparent 50%);
-  padding: 40px 32px 36px;
+    radial-gradient(circle at 75% 15%, rgba(255,255,255,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 25% 85%, rgba(0,0,0,0.10) 0%, transparent 50%);
+  padding: 44px 32px 40px;
   text-align: center;
 }
 
 .icon-wrap {
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255,255,255,0.14);
+  border: 1.5px solid rgba(255,255,255,0.22);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--white);
-  margin-bottom: 18px;
-  backdrop-filter: blur(4px);
+  margin-bottom: 20px;
 }
 
 .card__title {
   color: var(--white);
-  font-size: 1.375rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
-  margin-bottom: 8px;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
 }
 
 .card__subtitle {
-  color: rgba(255, 255, 255, 0.70);
+  color: rgba(255,255,255,0.65);
   font-size: 0.875rem;
-  font-weight: 400;
-  line-height: 1.5;
+  margin: 0;
 }
 
-/* ─── Body ───────────────────────────────────────────────────── */
-.card__body {
-  padding: 32px 32px 36px;
-}
+.card__body { padding: 36px 32px 40px; }
 
-/* ─── Form ───────────────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
@@ -102,7 +88,7 @@
 .form__group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .form__label {
@@ -113,10 +99,10 @@
 
 .form__input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 13px 15px;
   border: 1.5px solid var(--gray-200);
   border-radius: var(--radius-input);
-  font-family: inherit;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.9375rem;
   color: var(--text);
   background: var(--white);
@@ -124,50 +110,77 @@
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 
-.form__input::placeholder {
-  color: var(--gray-400);
-}
+.form__input::placeholder { color: var(--gray-400); }
 
 .form__input:focus {
   border-color: var(--navy-mid);
-  box-shadow: 0 0 0 3px rgba(29, 61, 107, 0.12);
+  box-shadow: 0 0 0 3px rgba(29,61,107,0.10);
 }
 
-/* ─── Button ─────────────────────────────────────────────────── */
+/* Error message */
+.form__error {
+  background: #fff0f0;
+  border: 1px solid #ffc5c5;
+  color: #d63031;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-align: center;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25%      { transform: translateX(-6px); }
+  75%      { transform: translateX(6px); }
+}
+
 .btn-login {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 10px;
   width: 100%;
-  padding: 13px 20px;
+  padding: 14px 20px;
   background: var(--navy-mid);
   color: var(--white);
   border: none;
   border-radius: var(--radius-btn);
-  font-family: inherit;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.9375rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
   cursor: pointer;
   margin-top: 4px;
-  transition: background var(--transition), box-shadow var(--transition),
-              transform var(--transition);
+  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
 }
 
-.btn-login:hover {
+.btn-login:hover:not(:disabled) {
   background: var(--navy);
-  box-shadow: 0 6px 20px rgba(30, 58, 95, 0.30);
+  box-shadow: 0 6px 22px rgba(30,58,95,0.28);
   transform: translateY(-1px);
 }
 
-.btn-login:active {
-  transform: translateY(0);
-  box-shadow: none;
+.btn-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-/* ─── Responsive ─────────────────────────────────────────────── */
+/* Spinner */
+.btn-login__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 480px) {
-  .card__header { padding: 32px 24px 28px; }
-  .card__body   { padding: 24px 24px 30px; }
+  .card__header { padding: 32px 24px 30px; }
+  .card__body   { padding: 28px 24px 32px; }
 }

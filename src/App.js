@@ -3,13 +3,13 @@ import Login from "./Login";
 import Dashboard from "./Dashboard";
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [usuario, setUsuario] = useState(null);
 
-  if (!loggedIn) {
-    return <Login onLogin={() => setLoggedIn(true)} />;
+  if (!usuario) {
+    return <Login onLogin={(u) => setUsuario(u)} />;
   }
 
-  return <Dashboard />;
+  return <Dashboard usuario={usuario} onLogout={() => setUsuario(null)} />;
 }
 
 export default App;
