@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./Dashboard.css";
 
-const API = "http://localhost:5000/api";
+const API = `http://${window.location.hostname}:5000/api`;
 
 // ════════════════════════════════════════════════════════
 // TIPOS
@@ -147,14 +147,24 @@ function Modal({ title, subtitle, onClose, children }: {
 // ════════════════════════════════════════════════════════
 // VISTA: INICIO
 // ════════════════════════════════════════════════════════
-function VistaInicio({ usuario, defensas, loading, onNav }: {
-  usuario: Usuario; defensas: Defensa[]; loading: boolean; onNav: (key: string) => void;
+function VistaInicio({ usuario, defensas, loading, onDetalle, onEvidencia }: {
+  usuario: Usuario; defensas: Defensa[]; loading: boolean;
+  onDetalle: (d: Defensa) => void; onEvidencia: (d: Defensa) => void;
 }) {
+  const [tabActiva, setTabActiva] = useState<string>("nuevas");
+
   const counts = {
     nuevas:      defensas.filter(d => d.estadoAsignacion === "pendiente").length,
     pendientes:  defensas.filter(d => d.estadoAsignacion === "aceptada").length,
     completadas: defensas.filter(d => d.estadoAsignacion === "completada").length,
   };
+
+  const listaFiltrada = {
+    nuevas:      defensas.filter(d => d.estadoAsignacion === "pendiente"),
+    pendientes:  defensas.filter(d => d.estadoAsignacion === "aceptada"),
+    completadas: defensas.filter(d => d.estadoAsignacion === "completada"),
+  };
+
   return (
     <>
       <Topbar usuario={usuario}/>
@@ -162,21 +172,67 @@ function VistaInicio({ usuario, defensas, loading, onNav }: {
         <section className="welcome">
           <h1 className="welcome__title">Bienvenida/o</h1>
           <p className="welcome__name">{usuario.nombre} {usuario.apellido}</p>
-          <span className="welcome__rol">{usuario.rolNombre}</span>
         </section>
+
         <section className="stats">
           {[
             { key:"nuevas",      label:"Nuevas",      ico:icons.bell,      cls:"blue"   },
             { key:"pendientes",  label:"Pendientes",  ico:icons.calendar,  cls:"yellow" },
             { key:"completadas", label:"Completadas", ico:icons.checkCirc, cls:"green"  },
           ].map(({ key, label, ico, cls }) => (
-            <button key={key} className="stat-card" onClick={() => onNav(key)}>
+            <button key={key} className="stat-card" onClick={() => setTabActiva(key)}>
               <div className={`stat-card__icon stat-card__icon--${cls}`}><Ico d={ico} size={24}/></div>
               <span className="stat-card__num">{loading ? "…" : counts[key as keyof typeof counts]}</span>
               <span className="stat-card__label">{label}</span>
             </button>
           ))}
         </section>
+
+        {/* Tabs */}
+        <div className="tabs">
+          {["nuevas","pendientes","completadas"].map(tab => (
+            <button key={tab}
+              className={`tabs__btn ${tabActiva === tab ? "tabs__btn--active" : ""}`}
+              onClick={() => setTabActiva(tab)}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Lista según tab activa */}
+        {loading ? <Spinner/> : (
+          <section className="defensas-list">
+            {listaFiltrada[tabActiva as keyof typeof listaFiltrada].length === 0
+              ? <Vacio texto={`No hay defensas ${tabActiva}`}/>
+              : listaFiltrada[tabActiva as keyof typeof listaFiltrada].map(d => (
+                <div key={d.idDefensa} className="inv-card">
+                  <h3 className="inv-card__nombre">{d.nombreEstudiante} {d.apellidoEstudiante}</h3>
+                  <p className="inv-card__titulo">{d.titulo}</p>
+                  <div className="inv-card__meta">
+                    <span className="defensa-meta__item"><Ico d={icons.calendar} size={13}/> {fFechaCorta(d.fecha)}</span>
+                    <span className="defensa-meta__item"><Ico d={icons.bell} size={13}/> {fHora(d.fecha)}</span>
+                  </div>
+                  <div className="inv-card__meta">
+                    <span className="defensa-meta__item"><Ico d={icons.pin} size={13}/> {d.lugar || "Sin lugar"}</span>
+                  </div>
+                  {tabActiva === "nuevas" && (
+                    <button className="btn-primary" onClick={() => onDetalle(d)}>Ver detalle</button>
+                  )}
+                  {tabActiva === "pendientes" && (
+                    <button className="btn-primary" onClick={() => onEvidencia(d)}>
+                      <Ico d={icons.upload} size={16}/> Completar defensa
+                    </button>
+                  )}
+                  {tabActiva === "completadas" && (
+                    <span className={`badge ${d.estadoPago === "pagado" ? "badge--pagado" : "badge--pend-pago"}`}>
+                      {d.estadoPago === "pagado" ? "Pago realizado" : "Pendiente"}
+                    </span>
+                  )}
+                </div>
+              ))
+            }
+          </section>
+        )}
       </main>
     </>
   );
@@ -660,7 +716,7 @@ export default function Dashboard({ usuario, onLogout }: DashboardProps) {
         onEnviar={handleEvidencia}/>
     );
     switch (nav) {
-      case "inicio":      return <VistaInicio      usuario={usuario} defensas={defensas} loading={loading} onNav={handleNav}/>;
+      case "inicio":      return <VistaInicio      usuario={usuario} defensas={defensas} loading={loading} onDetalle={d => setDetalle(d)} onEvidencia={d => setEvidencia(d)}/>;
       case "nuevas":      return <VistaNuevas      usuario={usuario} defensas={defensas} loading={loading} onDetalle={d => setDetalle(d)}/>;
       case "pendientes":  return <VistaPendientes  usuario={usuario} defensas={defensas} loading={loading} onEvidencia={d => setEvidencia(d)}/>;
       case "completadas": return <VistaCompletadas usuario={usuario} defensas={defensas} loading={loading}/>;

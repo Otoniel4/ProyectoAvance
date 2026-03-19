@@ -354,3 +354,51 @@ body {
   .detail-actions { grid-template-columns:1fr; }
   .table th, .table td { padding:10px 12px; }
 }
+
+/* ─── Tabs (inicio) ──────────────────────────────────────────── */
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.tabs__btn {
+  padding: 13px 8px;
+  border: none;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: background var(--tr), color var(--tr);
+}
+.tabs__btn--active {
+  background: var(--navy);
+  color: var(--white);
+  font-weight: 600;
+}
+.tabs__btn:not(.tabs__btn--active):hover {
+  background: var(--gray-100);
+  color: var(--text);
+}
+
+/* ─── Defensas list ──────────────────────────────────────────── */
+.defensas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Defensa meta items ─────────────────────────────────────── */
+.defensa-meta__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .8rem;
+  color: var(--gray-600);
+  margin-right: 14px;
+}
