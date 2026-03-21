@@ -27,18 +27,36 @@ interface Defensa {
   titulo: string;
   nombreEstudiante: string;
   apellidoEstudiante: string;
+  nombreDelegado?: string;
+  apellidoDelegado?: string;
+}
+
+interface Delegado {
+  idUsuario: number;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  telefono: string;
+  activo: number;
+  defensasAsignadas?: number;
+}
+
+interface Pago {
+  idPago: number;
+  idDefensa: number;
+  monto: number;
+  estado: string;
+  fechaPago: string | null;
+  nombreEstudiante: string;
+  apellidoEstudiante: string;
+  nombreDelegado?: string;
+  apellidoDelegado?: string;
+  fecha: string;
 }
 
 interface DashboardProps {
   usuario: Usuario;
   onLogout: () => void;
-}
-
-interface EvidenciaPayload {
-  defensa: Defensa;
-  imagen: File | null;
-  pdf: File | null;
-  comentarios: string;
 }
 
 // ════════════════════════════════════════════════════════
@@ -57,6 +75,7 @@ const icons: Record<string, React.ReactNode> = {
   doc:       <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
   check:     <polyline points="20 6 9 17 4 12"/>,
   user:      <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+  users:     <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
   bell:      <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
   calendar:  <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
   checkCirc: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
@@ -68,6 +87,14 @@ const icons: Record<string, React.ReactNode> = {
   phone:     <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.55 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></>,
   pin:       <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>,
   close:     <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
+  eye:       <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+  edit:      <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>,
+  trash:     <><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></>,
+  dollar:    <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>,
+  filter:    <><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>,
+  search:    <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+  plus:      <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+  userPlus:  <><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></>,
 };
 
 // ════════════════════════════════════════════════════════
@@ -75,11 +102,60 @@ const icons: Record<string, React.ReactNode> = {
 // ════════════════════════════════════════════════════════
 const fFecha = (f: string) => f ? new Date(f).toLocaleDateString("es-BO", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "-";
 const fFechaCorta = (f: string) => f ? new Date(f).toLocaleDateString("es-BO", { day:"2-digit", month:"2-digit", year:"numeric" }) : "-";
-const fHora  = (f: string) => f ? new Date(f).toLocaleTimeString("es-BO", { hour:"2-digit", minute:"2-digit" }) : "-";
+const fHora = (f: string) => f ? new Date(f).toLocaleTimeString("es-BO", { hour:"2-digit", minute:"2-digit" }) : "-";
+
+function BadgeEstado({ estado }: { estado: string }) {
+  const map: Record<string, string> = {
+    pendiente:  "badge--pendiente",
+    aceptada:   "badge--aceptada",
+    rechazada:  "badge--rechazada",
+    completada: "badge--completada",
+    completado: "badge--completada",
+    convocada:  "badge--convocada",
+    "sin asignar": "badge--sin-asignar",
+  };
+  const labels: Record<string, string> = {
+    pendiente:  "Pendiente",
+    aceptada:   "Aceptada",
+    rechazada:  "Rechazada",
+    completada: "Completada",
+    completado: "Completada",
+    convocada:  "Convocada",
+    "sin asignar": "Sin asignar",
+  };
+  const cls = map[estado?.toLowerCase()] || "badge--pendiente";
+  return <span className={`badge ${cls}`}>{labels[estado?.toLowerCase()] || estado}</span>;
+}
 
 // ════════════════════════════════════════════════════════
-// TOPBAR
+// COMPONENTES COMPARTIDOS
 // ════════════════════════════════════════════════════════
+function Spinner() {
+  return <div className="loading"><div className="loading__spinner"/><p>Cargando...</p></div>;
+}
+function Vacio({ texto }: { texto: string }) {
+  return <div className="empty">{texto}</div>;
+}
+
+function Modal({ title, subtitle, onClose, children, wide }: {
+  title: string; subtitle?: string; onClose: () => void; children: React.ReactNode; wide?: boolean;
+}) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className={`modal ${wide ? "modal--wide" : ""}`} onClick={e => e.stopPropagation()}>
+        <div className="modal__head">
+          <div>
+            <h3 className="modal__title">{title}</h3>
+            {subtitle && <p className="modal__sub">{subtitle}</p>}
+          </div>
+          <button className="modal__close" onClick={onClose}><Ico d={icons.close} size={18}/></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Topbar({ usuario, onBack }: { usuario: Usuario; onBack?: () => void }) {
   return (
     <header className="topbar">
@@ -98,9 +174,6 @@ function Topbar({ usuario, onBack }: { usuario: Usuario; onBack?: () => void }) 
   );
 }
 
-// ════════════════════════════════════════════════════════
-// BOTTOM NAV
-// ════════════════════════════════════════════════════════
 function BottomNav({ active, onChange }: { active: string; onChange: (key: string) => void }) {
   const items = [
     { key:"inicio",      label:"Inicio",      d: icons.home },
@@ -123,48 +196,16 @@ function BottomNav({ active, onChange }: { active: string; onChange: (key: strin
 }
 
 // ════════════════════════════════════════════════════════
-// MODAL
+// VISTAS DELEGADO
 // ════════════════════════════════════════════════════════
-function Modal({ title, subtitle, onClose, children }: {
-  title: string; subtitle?: string; onClose: () => void; children: React.ReactNode;
+function VistaInicio({ usuario, defensas, loading, onNav }: {
+  usuario: Usuario; defensas: Defensa[]; loading: boolean; onNav: (k: string) => void;
 }) {
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal__head">
-          <div>
-            <h3 className="modal__title">{title}</h3>
-            {subtitle && <p className="modal__sub">{subtitle}</p>}
-          </div>
-          <button className="modal__close" onClick={onClose}><Ico d={icons.close} size={18}/></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════
-// VISTA: INICIO
-// ════════════════════════════════════════════════════════
-function VistaInicio({ usuario, defensas, loading, onDetalle, onEvidencia }: {
-  usuario: Usuario; defensas: Defensa[]; loading: boolean;
-  onDetalle: (d: Defensa) => void; onEvidencia: (d: Defensa) => void;
-}) {
-  const [tabActiva, setTabActiva] = useState<string>("nuevas");
-
   const counts = {
     nuevas:      defensas.filter(d => d.estadoAsignacion === "pendiente").length,
     pendientes:  defensas.filter(d => d.estadoAsignacion === "aceptada").length,
     completadas: defensas.filter(d => d.estadoAsignacion === "completada").length,
   };
-
-  const listaFiltrada = {
-    nuevas:      defensas.filter(d => d.estadoAsignacion === "pendiente"),
-    pendientes:  defensas.filter(d => d.estadoAsignacion === "aceptada"),
-    completadas: defensas.filter(d => d.estadoAsignacion === "completada"),
-  };
-
   return (
     <>
       <Topbar usuario={usuario}/>
@@ -172,75 +213,26 @@ function VistaInicio({ usuario, defensas, loading, onDetalle, onEvidencia }: {
         <section className="welcome">
           <h1 className="welcome__title">Bienvenida/o</h1>
           <p className="welcome__name">{usuario.nombre} {usuario.apellido}</p>
+          <span className="welcome__rol">{usuario.rolNombre}</span>
         </section>
-
         <section className="stats">
-          {[
+          {([
             { key:"nuevas",      label:"Nuevas",      ico:icons.bell,      cls:"blue"   },
             { key:"pendientes",  label:"Pendientes",  ico:icons.calendar,  cls:"yellow" },
             { key:"completadas", label:"Completadas", ico:icons.checkCirc, cls:"green"  },
-          ].map(({ key, label, ico, cls }) => (
-            <button key={key} className="stat-card" onClick={() => setTabActiva(key)}>
+          ] as const).map(({ key, label, ico, cls }) => (
+            <button key={key} className="stat-card" onClick={() => onNav(key)}>
               <div className={`stat-card__icon stat-card__icon--${cls}`}><Ico d={ico} size={24}/></div>
-              <span className="stat-card__num">{loading ? "…" : counts[key as keyof typeof counts]}</span>
+              <span className="stat-card__num">{loading ? "…" : counts[key]}</span>
               <span className="stat-card__label">{label}</span>
             </button>
           ))}
         </section>
-
-        {/* Tabs */}
-        <div className="tabs">
-          {["nuevas","pendientes","completadas"].map(tab => (
-            <button key={tab}
-              className={`tabs__btn ${tabActiva === tab ? "tabs__btn--active" : ""}`}
-              onClick={() => setTabActiva(tab)}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {/* Lista según tab activa */}
-        {loading ? <Spinner/> : (
-          <section className="defensas-list">
-            {listaFiltrada[tabActiva as keyof typeof listaFiltrada].length === 0
-              ? <Vacio texto={`No hay defensas ${tabActiva}`}/>
-              : listaFiltrada[tabActiva as keyof typeof listaFiltrada].map(d => (
-                <div key={d.idDefensa} className="inv-card">
-                  <h3 className="inv-card__nombre">{d.nombreEstudiante} {d.apellidoEstudiante}</h3>
-                  <p className="inv-card__titulo">{d.titulo}</p>
-                  <div className="inv-card__meta">
-                    <span className="defensa-meta__item"><Ico d={icons.calendar} size={13}/> {fFechaCorta(d.fecha)}</span>
-                    <span className="defensa-meta__item"><Ico d={icons.bell} size={13}/> {fHora(d.fecha)}</span>
-                  </div>
-                  <div className="inv-card__meta">
-                    <span className="defensa-meta__item"><Ico d={icons.pin} size={13}/> {d.lugar || "Sin lugar"}</span>
-                  </div>
-                  {tabActiva === "nuevas" && (
-                    <button className="btn-primary" onClick={() => onDetalle(d)}>Ver detalle</button>
-                  )}
-                  {tabActiva === "pendientes" && (
-                    <button className="btn-primary" onClick={() => onEvidencia(d)}>
-                      <Ico d={icons.upload} size={16}/> Completar defensa
-                    </button>
-                  )}
-                  {tabActiva === "completadas" && (
-                    <span className={`badge ${d.estadoPago === "pagado" ? "badge--pagado" : "badge--pend-pago"}`}>
-                      {d.estadoPago === "pagado" ? "Pago realizado" : "Pendiente"}
-                    </span>
-                  )}
-                </div>
-              ))
-            }
-          </section>
-        )}
       </main>
     </>
   );
 }
 
-// ════════════════════════════════════════════════════════
-// VISTA: NUEVAS
-// ════════════════════════════════════════════════════════
 function VistaNuevas({ usuario, defensas, loading, onDetalle }: {
   usuario: Usuario; defensas: Defensa[]; loading: boolean; onDetalle: (d: Defensa) => void;
 }) {
@@ -277,98 +269,56 @@ function VistaNuevas({ usuario, defensas, loading, onDetalle }: {
   );
 }
 
-// ════════════════════════════════════════════════════════
-// VISTA: DETALLE CONVOCATORIA
-// ════════════════════════════════════════════════════════
 function VistaDetalle({ usuario, defensa, onBack, onAceptar, onRechazar }: {
   usuario: Usuario; defensa: Defensa;
   onBack: () => void;
   onAceptar: (id: number) => Promise<void>;
-  onRechazar: (id: number, justificacion: string) => Promise<void>;
+  onRechazar: (id: number, j: string) => Promise<void>;
 }) {
   const [modalRechazo, setModalRechazo] = useState(false);
   const [justificacion, setJustificacion] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleAceptar = async () => {
-    setLoading(true);
-    await onAceptar(defensa.idAsignacion);
-    setLoading(false);
-  };
-
-  const handleConfirmarRechazo = async () => {
-    if (!justificacion.trim()) return;
-    setLoading(true);
-    await onRechazar(defensa.idAsignacion, justificacion);
-    setLoading(false);
-    setModalRechazo(false);
-  };
-
   return (
     <>
       <Topbar usuario={usuario}/>
       <main className="main-content">
         <button className="btn-back" onClick={onBack}><Ico d={icons.back} size={16}/> Volver</button>
         <h2 className="page-title" style={{ marginBottom: 24 }}>Detalle de Convocatoria</h2>
-
         <div className="detail-section">
           <h4 className="detail-section__title">Información del Estudiante</h4>
-          <div className="detail-field">
-            <span className="detail-field__label">Nombre completo</span>
-            <span className="detail-field__value">{defensa.nombreEstudiante} {defensa.apellidoEstudiante}</span>
-          </div>
-          <div className="detail-field">
-            <span className="detail-field__label">Título de tesis</span>
-            <span className="detail-field__value">{defensa.titulo}</span>
-          </div>
+          <div className="detail-field"><span className="detail-field__label">Nombre completo</span><span className="detail-field__value">{defensa.nombreEstudiante} {defensa.apellidoEstudiante}</span></div>
+          <div className="detail-field"><span className="detail-field__label">Título de tesis</span><span className="detail-field__value">{defensa.titulo}</span></div>
         </div>
-
         <div className="detail-section">
           <h4 className="detail-section__title">Fecha y Hora</h4>
-          <div className="detail-field">
-            <span className="detail-field__label">Fecha</span>
-            <span className="detail-field__value">{fFecha(defensa.fecha)}</span>
-          </div>
-          <div className="detail-field">
-            <span className="detail-field__label">Hora</span>
-            <span className="detail-field__value">{fHora(defensa.fecha)}</span>
-          </div>
+          <div className="detail-field"><span className="detail-field__label">Fecha</span><span className="detail-field__value">{fFecha(defensa.fecha)}</span></div>
+          <div className="detail-field"><span className="detail-field__label">Hora</span><span className="detail-field__value">{fHora(defensa.fecha)}</span></div>
         </div>
-
         <div className="detail-section">
           <h4 className="detail-section__title">Ubicación</h4>
-          <div className="detail-field">
-            <span className="detail-field__label">Lugar</span>
-            <span className="detail-field__value">{defensa.lugar || "Sin lugar"}</span>
-          </div>
+          <div className="detail-field"><span className="detail-field__label">Lugar</span><span className="detail-field__value">{defensa.lugar || "Sin lugar"}</span></div>
         </div>
-
         <div className="detail-actions">
-          <button className="btn-primary" onClick={handleAceptar} disabled={loading}>
+          <button className="btn-primary" disabled={loading} onClick={async () => { setLoading(true); await onAceptar(defensa.idAsignacion); setLoading(false); }}>
             <Ico d={icons.check} size={16}/> Aceptar convocatoria
           </button>
-          <button className="btn-danger" onClick={() => setModalRechazo(true)} disabled={loading}>
+          <button className="btn-danger" disabled={loading} onClick={() => setModalRechazo(true)}>
             <Ico d={icons.close} size={16}/> Rechazar
           </button>
         </div>
       </main>
-
       {modalRechazo && (
-        <Modal title="Rechazar Convocatoria"
-          subtitle="Por favor, proporciona un justificativo para rechazar esta convocatoria."
-          onClose={() => setModalRechazo(false)}>
+        <Modal title="Rechazar Convocatoria" subtitle="Proporciona un justificativo." onClose={() => setModalRechazo(false)}>
           <div className="modal__body">
-            <label className="form__label">Justificativo del rechazo *</label>
-            <textarea className="form__textarea"
-              placeholder="Ej. Conflicto de horario con otra defensa..."
-              value={justificacion}
-              onChange={e => setJustificacion(e.target.value)}/>
+            <label className="form__label">Justificativo *</label>
+            <textarea className="form__textarea" placeholder="Ej. Conflicto de horario..."
+              value={justificacion} onChange={e => setJustificacion(e.target.value)}/>
           </div>
           <div className="modal__footer">
             <button className="btn-outline" onClick={() => setModalRechazo(false)}>Cancelar</button>
-            <button className="btn-danger" onClick={handleConfirmarRechazo} disabled={!justificacion.trim()}>
-              Confirmar rechazo
-            </button>
+            <button className="btn-danger" disabled={!justificacion.trim()} onClick={async () => {
+              setLoading(true); await onRechazar(defensa.idAsignacion, justificacion); setLoading(false); setModalRechazo(false);
+            }}>Confirmar rechazo</button>
           </div>
         </Modal>
       )}
@@ -376,9 +326,6 @@ function VistaDetalle({ usuario, defensa, onBack, onAceptar, onRechazar }: {
   );
 }
 
-// ════════════════════════════════════════════════════════
-// VISTA: PENDIENTES
-// ════════════════════════════════════════════════════════
 function VistaPendientes({ usuario, defensas, loading, onEvidencia }: {
   usuario: Usuario; defensas: Defensa[]; loading: boolean; onEvidencia: (d: Defensa) => void;
 }) {
@@ -412,25 +359,13 @@ function VistaPendientes({ usuario, defensas, loading, onEvidencia }: {
   );
 }
 
-// ════════════════════════════════════════════════════════
-// VISTA: EVIDENCIA
-// ════════════════════════════════════════════════════════
 function VistaEvidencia({ usuario, defensa, onBack, onEnviar }: {
-  usuario: Usuario; defensa: Defensa;
-  onBack: () => void;
-  onEnviar: (payload: EvidenciaPayload) => Promise<void>;
+  usuario: Usuario; defensa: Defensa; onBack: () => void; onEnviar: (p: any) => Promise<void>;
 }) {
   const [imagen, setImagen]      = useState<File | null>(null);
   const [pdf, setPdf]            = useState<File | null>(null);
-  const [comentarios, setComent] = useState<string>("");
-  const [loading, setLoading]    = useState<boolean>(false);
-
-  const handleEnviar = async () => {
-    setLoading(true);
-    await onEnviar({ defensa, imagen, pdf, comentarios });
-    setLoading(false);
-  };
-
+  const [comentarios, setComent] = useState("");
+  const [loading, setLoading]    = useState(false);
   return (
     <>
       <Topbar usuario={usuario}/>
@@ -438,7 +373,6 @@ function VistaEvidencia({ usuario, defensa, onBack, onEnviar }: {
         <button className="btn-back" onClick={onBack}><Ico d={icons.back} size={16}/> Volver</button>
         <h2 className="page-title">Subir Evidencia</h2>
         <p className="page-sub" style={{ marginBottom: 20 }}>{defensa.nombreEstudiante} {defensa.apellidoEstudiante}</p>
-
         <div className="detail-section">
           <h4 className="detail-section__title">Información de la Defensa</h4>
           <p className="ev-info"><strong>Título:</strong> {defensa.titulo}</p>
@@ -446,30 +380,24 @@ function VistaEvidencia({ usuario, defensa, onBack, onEnviar }: {
           <p className="ev-info"><strong>Hora:</strong> {fHora(defensa.fecha)}</p>
           <p className="ev-info"><strong>Lugar:</strong> {defensa.lugar}</p>
         </div>
-
         <div className="detail-section">
           <h4 className="detail-section__title">Subir Imagen de Asistencia</h4>
-          <input type="file" accept="image/*" className="file-input"
-            onChange={e => setImagen(e.target.files?.[0] ?? null)}/>
-          <p className="file-hint">Fotografía del acta de defensa o evidencia del asistente</p>
+          <input type="file" accept="image/*" className="file-input" onChange={e => setImagen(e.target.files?.[0] ?? null)}/>
+          <p className="file-hint">Fotografía del acta de defensa</p>
         </div>
-
         <div className="detail-section">
           <h4 className="detail-section__title">Subir Archivo PDF del Informe</h4>
-          <input type="file" accept=".pdf" className="file-input"
-            onChange={e => setPdf(e.target.files?.[0] ?? null)}/>
+          <input type="file" accept=".pdf" className="file-input" onChange={e => setPdf(e.target.files?.[0] ?? null)}/>
           <p className="file-hint">Informe de la defensa en formato PDF</p>
         </div>
-
         <div className="detail-section">
           <h4 className="detail-section__title">Comentarios</h4>
-          <textarea className="form__textarea"
-            placeholder="Observaciones adicionales sobre la defensa..."
-            value={comentarios}
-            onChange={e => setComent(e.target.value)}/>
+          <textarea className="form__textarea" placeholder="Observaciones adicionales..."
+            value={comentarios} onChange={e => setComent(e.target.value)}/>
         </div>
-
-        <button className="btn-primary btn-primary--full" onClick={handleEnviar} disabled={loading}>
+        <button className="btn-primary btn-primary--full" disabled={loading} onClick={async () => {
+          setLoading(true); await onEnviar({ defensa, imagen, pdf, comentarios }); setLoading(false);
+        }}>
           {loading ? <span className="btn-spinner"/> : <Ico d={icons.upload} size={16}/>}
           {loading ? " Enviando..." : " Enviar evidencia"}
         </button>
@@ -478,12 +406,7 @@ function VistaEvidencia({ usuario, defensa, onBack, onEnviar }: {
   );
 }
 
-// ════════════════════════════════════════════════════════
-// VISTA: COMPLETADAS
-// ════════════════════════════════════════════════════════
-function VistaCompletadas({ usuario, defensas, loading }: {
-  usuario: Usuario; defensas: Defensa[]; loading: boolean;
-}) {
+function VistaCompletadas({ usuario, defensas, loading }: { usuario: Usuario; defensas: Defensa[]; loading: boolean }) {
   const lista = defensas.filter(d => d.estadoAsignacion === "completada");
   return (
     <>
@@ -496,14 +419,7 @@ function VistaCompletadas({ usuario, defensas, loading }: {
         {loading ? <Spinner/> :
           <div className="table-wrap">
             <table className="table">
-              <thead>
-                <tr>
-                  <th>Estudiante</th>
-                  <th>Perfil de tesis</th>
-                  <th>Fecha</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Estudiante</th><th>Perfil de tesis</th><th>Fecha</th><th>Estado</th></tr></thead>
               <tbody>
                 {lista.length === 0
                   ? <tr><td colSpan={4} style={{ textAlign:"center", color:"#9aa5b4", padding:"32px" }}>Sin registros</td></tr>
@@ -512,11 +428,7 @@ function VistaCompletadas({ usuario, defensas, loading }: {
                       <td className="td-bold">{d.nombreEstudiante} {d.apellidoEstudiante}</td>
                       <td className="td-truncate">{d.titulo}</td>
                       <td>{fFechaCorta(d.fecha)}</td>
-                      <td>
-                        <span className={`badge ${d.estadoPago === "pagado" ? "badge--pagado" : "badge--pend-pago"}`}>
-                          {d.estadoPago === "pagado" ? "Pago realizado" : "Pendiente"}
-                        </span>
-                      </td>
+                      <td><span className={`badge ${d.estadoPago === "pagado" ? "badge--pagado" : "badge--pend-pago"}`}>{d.estadoPago === "pagado" ? "Pago realizado" : "Pendiente"}</span></td>
                     </tr>
                   ))
                 }
@@ -529,9 +441,6 @@ function VistaCompletadas({ usuario, defensas, loading }: {
   );
 }
 
-// ════════════════════════════════════════════════════════
-// VISTA: PERFIL
-// ════════════════════════════════════════════════════════
 function VistaPerfil({ usuario, onLogout }: { usuario: Usuario; onLogout: () => void }) {
   const [modalPass, setModalPass] = useState(false);
   const [notifs, setNotifs]       = useState(true);
@@ -539,97 +448,56 @@ function VistaPerfil({ usuario, onLogout }: { usuario: Usuario; onLogout: () => 
   const [passMsg, setPassMsg]     = useState("");
 
   const handleChangePass = async () => {
-    if (passForm.nueva !== passForm.confirmar) {
-      setPassMsg("Las contraseñas no coinciden"); return;
-    }
+    if (passForm.nueva !== passForm.confirmar) { setPassMsg("Las contraseñas no coinciden"); return; }
     const res = await fetch(`${API}/usuario/${usuario.id}/password`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      method:"PUT", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({ actual: passForm.actual, nueva: passForm.nueva }),
     });
     const data = await res.json();
     if (data.ok) {
       setPassMsg("Contraseña actualizada ✓");
       setTimeout(() => { setModalPass(false); setPassMsg(""); setPassForm({ actual:"", nueva:"", confirmar:"" }); }, 1500);
-    } else {
-      setPassMsg(data.mensaje || "Error al cambiar contraseña");
-    }
+    } else { setPassMsg(data.mensaje || "Error"); }
   };
 
   return (
     <>
       <Topbar usuario={usuario}/>
       <main className="main-content">
-        <div className="page-header">
-          <h2 className="page-title">Mi Perfil</h2>
-          <p className="page-sub">Gestiona tu información personal</p>
-        </div>
-
+        <div className="page-header"><h2 className="page-title">Mi Perfil</h2><p className="page-sub">Gestiona tu información personal</p></div>
         <div className="profile-avatar-row">
           <div className="profile-avatar"><Ico d={icons.user} size={32}/></div>
-          <div>
-            <p className="profile-nombre">{usuario.nombre} {usuario.apellido}</p>
-            <p className="profile-rol">{usuario.rolNombre}</p>
-          </div>
+          <div><p className="profile-nombre">{usuario.nombre} {usuario.apellido}</p><p className="profile-rol">{usuario.rolNombre}</p></div>
         </div>
-
         <div className="detail-section">
-          <h4 className="detail-section__title"><Ico d={icons.user} size={14}/> Información Personal</h4>
-          <div className="profile-field">
-            <span className="detail-field__label">Nombre completo</span>
-            <span className="detail-field__value">{usuario.nombre} {usuario.apellido}</span>
-          </div>
-          <div className="profile-field">
-            <span className="detail-field__label"><Ico d={icons.mail} size={13}/> Correo electrónico</span>
-            <span className="detail-field__value">{usuario.correo}</span>
-          </div>
-          <div className="profile-field">
-            <span className="detail-field__label"><Ico d={icons.phone} size={13}/> Teléfono</span>
-            <span className="detail-field__value">{usuario.telefono || "No registrado"}</span>
-          </div>
+          <h4 className="detail-section__title">Información Personal</h4>
+          <div className="profile-field"><span className="detail-field__label">Nombre completo</span><span className="detail-field__value">{usuario.nombre} {usuario.apellido}</span></div>
+          <div className="profile-field"><span className="detail-field__label">Correo electrónico</span><span className="detail-field__value">{usuario.correo}</span></div>
+          <div className="profile-field"><span className="detail-field__label">Teléfono</span><span className="detail-field__value">{usuario.telefono || "No registrado"}</span></div>
         </div>
-
         <div className="detail-section">
-          <h4 className="detail-section__title"><Ico d={icons.lock} size={14}/> Seguridad</h4>
-          <button className="btn-outline btn-outline--full" onClick={() => setModalPass(true)}>
-            <Ico d={icons.lock} size={16}/> Cambiar contraseña
-          </button>
+          <h4 className="detail-section__title">Seguridad</h4>
+          <button className="btn-outline btn-outline--full" onClick={() => setModalPass(true)}><Ico d={icons.lock} size={16}/> Cambiar contraseña</button>
         </div>
-
         <div className="detail-section">
-          <h4 className="detail-section__title"><Ico d={icons.bell} size={14}/> Notificaciones</h4>
+          <h4 className="detail-section__title">Notificaciones</h4>
           <div className="toggle-row">
-            <div>
-              <p className="toggle-label">Activar notificaciones</p>
-              <p className="toggle-sub">Recibir alertas de nuevas convocatorias</p>
-            </div>
-            <button className={`toggle ${notifs ? "toggle--on" : ""}`} onClick={() => setNotifs(!notifs)}>
-              <span className="toggle__knob"/>
-            </button>
+            <div><p className="toggle-label">Activar notificaciones</p><p className="toggle-sub">Recibir alertas de nuevas convocatorias</p></div>
+            <button className={`toggle ${notifs ? "toggle--on" : ""}`} onClick={() => setNotifs(!notifs)}><span className="toggle__knob"/></button>
           </div>
         </div>
-
-        <button className="btn-logout-full" onClick={onLogout}>
-          <Ico d={icons.logout} size={18}/> Cerrar sesión
-        </button>
+        <button className="btn-logout-full" onClick={onLogout}><Ico d={icons.logout} size={18}/> Cerrar sesión</button>
       </main>
-
       {modalPass && (
-        <Modal title="Cambiar Contraseña"
-          subtitle="Ingresa tu contraseña actual y la nueva contraseña."
-          onClose={() => setModalPass(false)}>
+        <Modal title="Cambiar Contraseña" subtitle="Ingresa tu contraseña actual y la nueva." onClose={() => setModalPass(false)}>
           <div className="modal__body">
             {(["actual","nueva","confirmar"] as const).map(k => (
-              <div key={k} className="form__group" style={{ marginBottom: 14 }}>
-                <label className="form__label">
-                  {k === "actual" ? "Contraseña actual" : k === "nueva" ? "Nueva contraseña" : "Confirmar nueva contraseña"}
-                </label>
-                <input type="password" className="form__input"
-                  value={passForm[k]}
-                  onChange={e => setPassForm({ ...passForm, [k]: e.target.value })}/>
+              <div key={k} className="form__group" style={{ marginBottom:14 }}>
+                <label className="form__label">{k==="actual"?"Contraseña actual":k==="nueva"?"Nueva contraseña":"Confirmar nueva contraseña"}</label>
+                <input type="password" className="form__input" value={passForm[k]} onChange={e => setPassForm({...passForm,[k]:e.target.value})}/>
               </div>
             ))}
-            {passMsg && <p className={`${passMsg.includes("✓") ? "form__msg--ok" : "form__error"}`}>{passMsg}</p>}
+            {passMsg && <p className={passMsg.includes("✓") ? "form__msg--ok" : "form__error"}>{passMsg}</p>}
           </div>
           <div className="modal__footer">
             <button className="btn-outline" onClick={() => setModalPass(false)}>Cancelar</button>
@@ -642,81 +510,592 @@ function VistaPerfil({ usuario, onLogout }: { usuario: Usuario; onLogout: () => 
 }
 
 // ════════════════════════════════════════════════════════
-// SPINNER / VACÍO
+// VISTAS ADMIN
 // ════════════════════════════════════════════════════════
-function Spinner() {
-  return <div className="loading"><div className="loading__spinner"/><p>Cargando...</p></div>;
+function VistaAdminDashboard({ defensas, onNav }: { defensas: Defensa[]; onNav: (k: string) => void }) {
+  const hoy = new Date();
+  const defensasHoy   = defensas.filter(x => { const fx = new Date(x.fecha); return fx.toDateString() === hoy.toDateString(); }).length;
+  const sinAsignar    = defensas.filter(x => !x.nombreDelegado).length;
+  const completadas   = defensas.filter(x => x.estado === "completada").length;
+  const proximas      = [...defensas].sort((a,b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()).slice(0,5);
+
+  const cards = [
+    { label:"Defensas hoy",           value: defensasHoy,       tone:"blue",   ico: icons.calendar },
+    { label:"Defensas sin asignar",   value: sinAsignar,        tone:"orange", ico: icons.bell },
+    { label:"Convocatorias enviadas", value: defensas.length,   tone:"purple", ico: icons.doc },
+    { label:"Defensas completadas",   value: completadas,       tone:"green",  ico: icons.checkCirc },
+    { label:"Pagos pendientes",       value: 0,                 tone:"yellow", ico: icons.dollar },
+  ];
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div><h2 className="admin-page-title">Dashboard</h2><p className="admin-page-sub">Resumen general del sistema de defensas de tesis</p></div>
+      </div>
+      <div className="admin-cards">
+        {cards.map(c => (
+          <div key={c.label} className="admin-card">
+            <div className="admin-card__top">
+              <span className="admin-card__label">{c.label}</span>
+              <div className={`admin-card__ico admin-card__ico--${c.tone}`}><Ico d={c.ico} size={16}/></div>
+            </div>
+            <div className="admin-card__value">{c.value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="admin-panel">
+        <div className="admin-panel__head">
+          <div><h3 className="page-title">Próximas defensas</h3><p className="page-sub">Defensas programadas para los próximos días</p></div>
+          <button className="btn-outline" onClick={() => onNav("admin_defensas")}>Ver todas</button>
+        </div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Estudiante</th><th>Título de tesis</th><th>Fecha</th><th>Hora</th><th>Lugar</th><th>Delegado asignado</th><th>Estado</th></tr></thead>
+            <tbody>
+              {proximas.length === 0
+                ? <tr><td colSpan={7} style={{textAlign:"center",color:"#9aa5b4",padding:"32px"}}>Sin registros</td></tr>
+                : proximas.map(x => (
+                  <tr key={x.idDefensa}>
+                    <td className="td-bold">{x.nombreEstudiante} {x.apellidoEstudiante}</td>
+                    <td className="td-truncate">{x.titulo}</td>
+                    <td>{fFechaCorta(x.fecha)}</td>
+                    <td>{fHora(x.fecha)}</td>
+                    <td className="td-truncate">{x.lugar || "-"}</td>
+                    <td>{x.nombreDelegado ? `${x.nombreDelegado} ${x.apellidoDelegado}` : <span style={{color:"#9aa5b4"}}>—</span>}</td>
+                    <td><BadgeEstado estado={x.estadoAsignacion || x.estado}/></td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
 }
-function Vacio({ texto }: { texto: string }) {
-  return <div className="empty">{texto}</div>;
+
+function VistaAdminDefensas({ defensas, loading, delegados, onIrCrear, onRecargar }: {
+  defensas: Defensa[]; loading: boolean; delegados: Delegado[];
+  onIrCrear: () => void; onRecargar: () => void;
+}) {
+  const [busqueda, setBusqueda]       = useState("");
+  const [filtroDelegado, setFiltro]   = useState("");
+  const [modalAsignar, setModalAsignar] = useState<Defensa | null>(null);
+  const [busqDelegado, setBusqDelegado] = useState("");
+  const [delegadoSel, setDelegadoSel]   = useState<Delegado | null>(null);
+  const [msgAsignar, setMsgAsignar]     = useState("");
+
+  const filtradas = defensas.filter(d => {
+    const nombre = `${d.nombreEstudiante} ${d.apellidoEstudiante}`.toLowerCase();
+    const matchBusq = !busqueda || nombre.includes(busqueda.toLowerCase());
+    const matchDel = !filtroDelegado || `${d.nombreDelegado} ${d.apellidoDelegado}`.includes(filtroDelegado);
+    return matchBusq && matchDel;
+  });
+
+  const delegadosFiltrados = delegados.filter(d =>
+    `${d.nombre} ${d.apellido}`.toLowerCase().includes(busqDelegado.toLowerCase())
+  );
+
+  const handleAsignar = async () => {
+    if (!delegadoSel || !modalAsignar) return;
+    setMsgAsignar("");
+    try {
+      const res = await fetch(`${API}/defensas/${modalAsignar.idDefensa}/asignar`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idDelegado: delegadoSel.idUsuario }),
+      });
+      const data = await res.json();
+      if (data.ok) { setModalAsignar(null); setDelegadoSel(null); setBusqDelegado(""); onRecargar(); }
+      else setMsgAsignar(data.error || "Error al asignar");
+    } catch { setMsgAsignar("Sin conexión"); }
+  };
+
+  const handleEliminar = async (idDefensa: number) => {
+    if (!window.confirm("¿Eliminar esta defensa?")) return;
+    await fetch(`${API}/defensas/${idDefensa}`, { method: "DELETE" });
+    onRecargar();
+  };
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div><h2 className="admin-page-title">Gestión de Defensas</h2><p className="admin-page-sub">Administra todas las defensas de tesis</p></div>
+        <button className="btn-primary" onClick={onIrCrear}><Ico d={icons.plus} size={16}/> Nueva Defensa</button>
+      </div>
+
+      {/* Filtros */}
+      <div className="admin-panel" style={{marginBottom:16}}>
+        <div className="filtros-row">
+          <Ico d={icons.filter} size={16}/>
+          <span style={{fontWeight:600,fontSize:".9rem"}}>Filtros</span>
+        </div>
+        <div className="filtros-inputs">
+          <div className="search-wrap">
+            <Ico d={icons.search} size={15}/>
+            <input className="form__input search-input" placeholder="Buscar por estudiante..."
+              value={busqueda} onChange={e => setBusqueda(e.target.value)}/>
+          </div>
+          <select className="form__input" value={filtroDelegado} onChange={e => setFiltro(e.target.value)} style={{maxWidth:200}}>
+            <option value="">Todos los delegados</option>
+            {delegados.map(d => <option key={d.idUsuario} value={`${d.nombre} ${d.apellido}`}>{d.nombre} {d.apellido}</option>)}
+          </select>
+          <button className="btn-outline" onClick={() => { setBusqueda(""); setFiltro(""); }}>Limpiar filtros</button>
+        </div>
+        <p className="filtros-count">Mostrando {filtradas.length} de {defensas.length} defensas</p>
+      </div>
+
+      <div className="admin-panel">
+        {loading ? <Spinner/> :
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Estudiante</th><th>Perfil de tesis</th><th>Fecha</th><th>Hora</th>
+                  <th>Lugar</th><th>Delegado</th><th>Estado</th><th>Accion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtradas.length === 0
+                  ? <tr><td colSpan={8} style={{textAlign:"center",color:"#9aa5b4",padding:"32px"}}>Sin defensas</td></tr>
+                  : filtradas.map(d => (
+                    <tr key={d.idDefensa}>
+                      <td className="td-bold">{d.nombreEstudiante} {d.apellidoEstudiante}</td>
+                      <td className="td-truncate">{d.titulo}</td>
+                      <td>{fFechaCorta(d.fecha)}</td>
+                      <td>{fHora(d.fecha)}</td>
+                      <td className="td-truncate">{d.lugar || "-"}</td>
+                      <td>{d.nombreDelegado ? `${d.nombreDelegado} ${d.apellidoDelegado}` : <span style={{color:"#9aa5b4"}}>—</span>}</td>
+                      <td><BadgeEstado estado={d.estadoAsignacion || d.estado}/></td>
+                      <td>
+                        <div className="acciones-row">
+                          <button className="btn-primary btn-sm" onClick={() => { setModalAsignar(d); setBusqDelegado(""); setDelegadoSel(null); }}>Asignar</button>
+                          <button className="btn-danger btn-sm" onClick={() => handleEliminar(d.idDefensa)}>Eliminar</button>
+                          <button className="btn-icon" title="Ver"><Ico d={icons.eye} size={16}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      {modalAsignar && (
+        <Modal title="Asignar delegada/o" subtitle="Asignar a una defensa" onClose={() => setModalAsignar(null)}>
+          <div className="modal__body">
+            <label className="form__label">Nombre</label>
+            <div className="search-wrap" style={{marginBottom:12}}>
+              <Ico d={icons.search} size={15}/>
+              <input className="form__input search-input" placeholder="Buscar delegada/o..."
+                value={busqDelegado} onChange={e => { setBusqDelegado(e.target.value); setDelegadoSel(null); }}/>
+            </div>
+            <div className="delegados-lista">
+              {delegadosFiltrados.map(d => (
+                <button key={d.idUsuario} type="button"
+                  className={`delegado-item ${delegadoSel?.idUsuario === d.idUsuario ? "delegado-item--sel" : ""}`}
+                  onClick={() => setDelegadoSel(d)}>
+                  <div className="delegado-avatar">{d.nombre[0]}{d.apellido[0]}</div>
+                  <div><p className="delegado-nombre">{d.nombre} {d.apellido}</p><p className="delegado-correo">{d.correo}</p></div>
+                </button>
+              ))}
+              {delegadosFiltrados.length === 0 && <p style={{color:"#9aa5b4",textAlign:"center",padding:"16px 0"}}>Sin resultados</p>}
+            </div>
+            {msgAsignar && <p className="form__error" style={{marginTop:8}}>{msgAsignar}</p>}
+          </div>
+          <div className="modal__footer">
+            <button className="btn-outline" onClick={() => setModalAsignar(null)}>Cancelar</button>
+            <button className="btn-primary" disabled={!delegadoSel} onClick={handleAsignar}>Confirmar asignación</button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function VistaAdminCrearDefensa({ onBack, onCreada }: { onBack: () => void; onCreada: () => void }) {
+  const [form, setForm] = useState({
+    nombreEstudiante:"", apellidoEstudiante:"", titulo:"",
+    fecha:"", hora:"", lugar:"", direccion:"", observaciones:"",
+  });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(prev => ({ ...prev, [k]: e.target.value }));
+
+  const handleCrear = async (e: React.FormEvent) => {
+    e.preventDefault(); setMsg(""); setLoading(true);
+    try {
+      const iso = form.fecha && form.hora
+        ? new Date(`${form.fecha}T${form.hora}:00`).toISOString().slice(0,19).replace("T"," ") : null;
+      const res = await fetch(`${API}/defensas`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          estudianteNombre: form.nombreEstudiante.trim(),
+          estudianteApellido: form.apellidoEstudiante.trim(),
+          titulo: form.titulo.trim(),
+          fecha: iso,
+          lugar: form.lugar.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) setMsg(data.error || "No se pudo crear");
+      else { setMsg("Defensa creada ✓"); setTimeout(() => onCreada(), 1000); }
+    } catch { setMsg("Sin conexión"); } finally { setLoading(false); }
+  };
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div><h2 className="admin-page-title">Nueva Defensa</h2><p className="admin-page-sub">Completa el formulario para crear una nueva defensa</p></div>
+      </div>
+      <form className="admin-panel" onSubmit={handleCrear}>
+        <button type="button" className="btn-back" style={{marginBottom:16}} onClick={onBack}><Ico d={icons.back} size={16}/> Volver</button>
+        <div className="detail-section">
+          <h4 className="detail-section__title">Información de la Defensa</h4>
+          <p style={{fontSize:".82rem",color:"#9aa5b4",marginBottom:16}}>Los campos marcados con * son obligatorios</p>
+
+          <div className="form__group" style={{marginBottom:14}}>
+            <label className="form__label">Nombre del estudiante *</label>
+            <input className="form__input" placeholder="Ej. María González Pérez"
+              value={form.nombreEstudiante} onChange={set("nombreEstudiante")} required/>
+          </div>
+          <div className="form__group" style={{marginBottom:14}}>
+            <label className="form__label">Título o perfil de tesis *</label>
+            <textarea className="form__textarea" style={{minHeight:70}} placeholder="Ej. Estrategias de Marketing Digital en Redes Sociales"
+              value={form.titulo} onChange={set("titulo")} required/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div className="form__group">
+              <label className="form__label">Fecha *</label>
+              <input type="date" className="form__input" value={form.fecha} onChange={set("fecha")} required/>
+            </div>
+            <div className="form__group">
+              <label className="form__label">Hora *</label>
+              <input type="time" className="form__input" value={form.hora} onChange={set("hora")} required/>
+            </div>
+          </div>
+          <div className="form__group" style={{marginBottom:14}}>
+            <label className="form__label">Lugar *</label>
+            <input className="form__input" placeholder="Ej. Auditorio Principal" value={form.lugar} onChange={set("lugar")} required/>
+          </div>
+          <div className="form__group" style={{marginBottom:14}}>
+            <label className="form__label">Dirección *</label>
+            <input className="form__input" placeholder="Ej. Av. Heroinas #1234, Cochabamba" value={form.direccion} onChange={set("direccion")}/>
+          </div>
+          <div className="form__group" style={{marginBottom:14}}>
+            <label className="form__label">Observaciones</label>
+            <textarea className="form__textarea" placeholder="Notas adicionales, requerimientos especiales, etc."
+              value={form.observaciones} onChange={set("observaciones")}/>
+          </div>
+          {msg && <p className={msg.includes("✓") ? "form__msg--ok" : "form__error"} style={{marginBottom:12}}>{msg}</p>}
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn-primary" type="submit" disabled={loading}>
+              <Ico d={icons.doc} size={16}/> {loading ? "Creando..." : "Crear defensa"}
+            </button>
+            <button className="btn-outline" type="button" onClick={onBack}>
+              <Ico d={icons.close} size={16}/> Cancelar
+            </button>
+          </div>
+        </div>
+      </form>
+    </>
+  );
+}
+
+function VistaAdminDelegados() {
+  const [loading, setLoading]   = useState(true);
+  const [delegados, setDelegados] = useState<Delegado[]>([]);
+  const [error, setError]       = useState("");
+  const [modal, setModal]       = useState<{mode:"new"|"edit";delegado?:Delegado}|null>(null);
+  const [form, setForm]         = useState({ nombre:"", apellido:"", correo:"", telefono:"", password:"" });
+
+  const cargar = () => {
+    setLoading(true); setError("");
+    fetch(`${API}/admin/delegados`).then(r=>r.json())
+      .then(d => { if(d.ok) setDelegados(d.delegados||[]); else setError(d.mensaje||"Error"); })
+      .catch(() => setError("Sin conexión")).finally(() => setLoading(false));
+  };
+  useEffect(() => { cargar(); }, []);
+
+  const save = async () => {
+    try {
+      if (modal?.mode === "new") {
+        const res = await fetch(`${API}/admin/delegados`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(form) });
+        const d = await res.json(); if (!d.ok) throw new Error(d.mensaje||"Error");
+      } else if (modal?.mode === "edit" && modal.delegado) {
+        const res = await fetch(`${API}/admin/delegados/${modal.delegado.idUsuario}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(form) });
+        const d = await res.json(); if (!d.ok) throw new Error(d.mensaje||"Error");
+      }
+      setModal(null); cargar();
+    } catch(e: any) { setError(e.message||"Error"); }
+  };
+
+  const setActivo = async (id: number, activo: boolean) => {
+    await fetch(`${API}/admin/usuario/${id}/activo`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ activo }) });
+    cargar();
+  };
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div><h2 className="admin-page-title">Gestión de Delegados</h2><p className="admin-page-sub">Administra los delegados registrados</p></div>
+        <button className="btn-primary" onClick={() => { setForm({nombre:"",apellido:"",correo:"",telefono:"",password:""}); setModal({mode:"new"}); }}>
+          <Ico d={icons.userPlus} size={16}/> Asignar delegado
+        </button>
+      </div>
+      <div className="admin-panel">
+        <h3 className="page-title" style={{marginBottom:16}}>Todos los delegados</h3>
+        {loading ? <Spinner/> : (
+          <>
+            {error && <p className="form__error" style={{marginBottom:12}}>{error}</p>}
+            <div className="table-wrap">
+              <table className="table">
+                <thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Estado</th><th>Defensas asignadas</th></tr></thead>
+                <tbody>
+                  {delegados.length === 0
+                    ? <tr><td colSpan={5} style={{textAlign:"center",color:"#9aa5b4",padding:"32px"}}>Sin delegados</td></tr>
+                    : delegados.map(d => (
+                      <tr key={d.idUsuario} style={{cursor:"pointer"}} onClick={() => { setForm({nombre:d.nombre,apellido:d.apellido,correo:d.correo,telefono:d.telefono||"",password:""}); setModal({mode:"edit",delegado:d}); }}>
+                        <td className="td-bold">{d.nombre} {d.apellido}</td>
+                        <td>{d.correo}</td>
+                        <td>{d.telefono || "-"}</td>
+                        <td>
+                          <span className={`badge ${d.activo ? "badge--aceptada" : "badge--rechazada"}`}>
+                            {d.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="badge-count">{d.defensasAsignadas ?? 0}</span>
+                        </td>
+                      </tr>
+                    ))
+                  }
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {modal && (
+        <Modal title={modal.mode==="new"?"Nuevo delegado":"Editar delegado"} onClose={() => setModal(null)}>
+          <div className="modal__body">
+            {(["nombre","apellido","correo","telefono","password"] as const).map(k => (
+              <div key={k} className="form__group" style={{marginBottom:12}}>
+                <label className="form__label">
+                  {k==="password"?(modal.mode==="new"?"Contraseña *":"Nueva contraseña (opcional)"):k.charAt(0).toUpperCase()+k.slice(1)+" *"}
+                </label>
+                <input className="form__input" type={k==="password"?"password":k==="correo"?"email":"text"}
+                  value={form[k]} onChange={e => setForm({...form,[k]:e.target.value})}/>
+              </div>
+            ))}
+            {modal.mode === "edit" && modal.delegado && (
+              <div style={{display:"flex",gap:8,marginTop:4}}>
+                {modal.delegado.activo
+                  ? <button className="btn-outline" type="button" onClick={() => { setActivo(modal.delegado!.idUsuario, false); setModal(null); }}>Desactivar</button>
+                  : <button className="btn-outline" type="button" onClick={() => { setActivo(modal.delegado!.idUsuario, true); setModal(null); }}>Activar</button>
+                }
+              </div>
+            )}
+          </div>
+          <div className="modal__footer">
+            <button className="btn-outline" onClick={() => setModal(null)}>Cancelar</button>
+            <button className="btn-primary" onClick={save}
+              disabled={!form.nombre.trim()||!form.apellido.trim()||!form.correo.trim()||(modal.mode==="new"&&!form.password)}>
+              Guardar
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function VistaAdminPagos() {
+  const [pagos, setPagos]   = useState<Pago[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]   = useState("");
+
+  const cargar = () => {
+    setLoading(true);
+    fetch(`${API}/admin/pagos`).then(r=>r.json())
+      .then(d => { if(d.ok) setPagos(d.pagos||[]); else setError(d.error||"Error"); })
+      .catch(() => setError("Sin conexión")).finally(() => setLoading(false));
+  };
+  useEffect(() => { cargar(); }, []);
+
+  const marcarPagado = async (idPago: number) => {
+    await fetch(`${API}/admin/pagos/${idPago}/pagar`, { method:"PUT" });
+    cargar();
+  };
+
+  const pendientes  = pagos.filter(p => p.estado === "pendiente");
+  const completados = pagos.filter(p => p.estado === "pagado");
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div><h2 className="admin-page-title">Pagos Pendientes</h2><p className="admin-page-sub">Gestiona los pagos de las defensas completadas</p></div>
+      </div>
+
+      <div className="admin-cards" style={{gridTemplateColumns:"repeat(3,1fr)"}}>
+        {[
+          { label:"Pagos pendientes",  value: pendientes.length,  tone:"yellow", ico: icons.bell },
+          { label:"Pagos completados", value: completados.length, tone:"green",  ico: icons.checkCirc },
+          { label:"Total de defensas", value: pagos.length,       tone:"blue",   ico: icons.dollar },
+        ].map(c => (
+          <div key={c.label} className="admin-card">
+            <div className="admin-card__top">
+              <span className="admin-card__label">{c.label}</span>
+              <div className={`admin-card__ico admin-card__ico--${c.tone}`}><Ico d={c.ico} size={16}/></div>
+            </div>
+            <div className="admin-card__value">{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="admin-panel">
+        <h3 className="page-title" style={{marginBottom:16}}>Defensas con pagos pendientes</h3>
+        {loading ? <Spinner/> : error ? <p className="form__error">{error}</p> :
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Estudiante</th><th>Delegado</th><th>Fecha de defensa</th><th>Estado de pago</th><th>Acción</th></tr></thead>
+              <tbody>
+                {pendientes.length === 0
+                  ? <tr><td colSpan={5} style={{textAlign:"center",color:"#9aa5b4",padding:"32px"}}>Sin pagos pendientes</td></tr>
+                  : pendientes.map(p => (
+                    <tr key={p.idPago}>
+                      <td className="td-bold">{p.nombreEstudiante} {p.apellidoEstudiante}</td>
+                      <td>{p.nombreDelegado ? `${p.nombreDelegado} ${p.apellidoDelegado}` : "-"}</td>
+                      <td>{fFechaCorta(p.fecha)}</td>
+                      <td><span className="badge badge--pend-pago">Pendiente de pago</span></td>
+                      <td>
+                        <button className="btn-pago" onClick={() => marcarPagado(p.idPago)}>
+                          <Ico d={icons.dollar} size={15}/> Marcar como pagado
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </>
+  );
+}
+
+function AdminSidebar({ usuario, active, onChange, onLogout }: {
+  usuario: Usuario; active: string; onChange: (k: string) => void; onLogout: () => void;
+}) {
+  const items = [
+    { key:"admin_dashboard",    label:"Dashboard",            ico: icons.home },
+    { key:"admin_defensas",     label:"Gestión de Defensas",  ico: icons.doc },
+    { key:"admin_delegados",    label:"Gestión de Delegados", ico: icons.users },
+    { key:"admin_invitaciones", label:"Invitaciones",         ico: icons.mail },
+    { key:"admin_pagos",        label:"Pagos Pendientes",     ico: icons.dollar },
+  ];
+  return (
+    <aside className="admin-sidebar">
+      <div className="admin-brand">
+        <div className="admin-brand__title">Colegio de Marketing</div>
+        <div className="admin-brand__sub">Panel Administrador</div>
+      </div>
+      <div className="admin-menu">
+        {items.map(it => (
+          <button key={it.key} type="button"
+            className={`admin-menu__item ${active === it.key ? "admin-menu__item--active" : ""}`}
+            onClick={() => onChange(it.key)}>
+            <span className="admin-menu__ico"><Ico d={it.ico} size={16}/></span>
+            {it.label}
+          </button>
+        ))}
+      </div>
+      <div className="admin-user">
+        <div className="admin-user__avatar">AD</div>
+        <div>
+          <div className="admin-user__name">{usuario.nombre} {usuario.apellido}</div>
+          <div className="admin-user__mail">{usuario.correo}</div>
+        </div>
+      </div>
+      <button className="admin-logout" onClick={onLogout} type="button">
+        <Ico d={icons.logout} size={18}/> Cerrar sesión
+      </button>
+    </aside>
+  );
 }
 
 // ════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
 // ════════════════════════════════════════════════════════
 export default function Dashboard({ usuario, onLogout }: DashboardProps) {
-  const [nav, setNav]             = useState<string>("inicio");
+  const [nav, setNav]             = useState(usuario.rol === 0 ? "admin_dashboard" : "inicio");
   const [defensas, setDefensas]   = useState<Defensa[]>([]);
-  const [loading, setLoading]     = useState<boolean>(true);
+  const [delegados, setDelegados] = useState<Delegado[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [detalle, setDetalle]     = useState<Defensa | null>(null);
   const [evidencia, setEvidencia] = useState<Defensa | null>(null);
 
   const cargarDefensas = () => {
     setLoading(true);
-    const url = usuario.rol === 0
-      ? `${API}/defensas`
-      : `${API}/defensas/${usuario.id}`;
-    fetch(url)
-      .then(r => r.json())
-      .then(d => { if (d.ok) setDefensas(d.defensas); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    const url = usuario.rol === 0 ? `${API}/admin/defensas` : `${API}/defensas/${usuario.id}`;
+    fetch(url).then(r=>r.json()).then(d => { if(d.ok) setDefensas(d.defensas); }).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { cargarDefensas(); }, [usuario]);
+  const cargarDelegados = () => {
+    if (usuario.rol !== 0) return;
+    fetch(`${API}/admin/delegados/detalle`).then(r=>r.json()).then(d => { if(d.ok) setDelegados(d.delegados||[]); }).catch(console.error);
+  };
 
-  const handleAceptar = async (idAsignacion: number) => {
-    await fetch(`${API}/asignacion/${idAsignacion}/estado`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado: "aceptada" }),
-    });
+  useEffect(() => { cargarDefensas(); cargarDelegados(); }, [usuario]);
+
+  const handleAceptar = async (id: number) => {
+    await fetch(`${API}/asignacion/${id}/estado`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({estado:"aceptada"}) });
     setDetalle(null); setNav("pendientes"); cargarDefensas();
   };
 
-  const handleRechazar = async (idAsignacion: number, justificacion: string) => {
-    await fetch(`${API}/asignacion/${idAsignacion}/estado`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado: "rechazada", justificacion }),
-    });
+  const handleRechazar = async (id: number, justificacion: string) => {
+    await fetch(`${API}/asignacion/${id}/estado`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({estado:"rechazada",justificacion}) });
     setDetalle(null); setNav("nuevas"); cargarDefensas();
   };
 
-  const handleEvidencia = async ({ defensa, comentarios }: EvidenciaPayload) => {
-    await fetch(`${API}/asignacion/${defensa.idAsignacion}/completar`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ comentarios }),
-    });
+  const handleEvidencia = async ({ defensa, comentarios }: any) => {
+    await fetch(`${API}/asignacion/${defensa.idAsignacion}/completar`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({comentarios}) });
     setEvidencia(null); setNav("completadas"); cargarDefensas();
   };
 
-  const handleNav = (key: string) => {
-    setDetalle(null); setEvidencia(null); setNav(key);
-  };
+  const handleNav = (key: string) => { setDetalle(null); setEvidencia(null); setNav(key); };
 
-  const renderVista = () => {
-    if (detalle) return (
-      <VistaDetalle usuario={usuario} defensa={detalle}
-        onBack={() => setDetalle(null)}
-        onAceptar={handleAceptar}
-        onRechazar={handleRechazar}/>
+  // ── Render Admin ─────────────────────────────────────
+  if (usuario.rol === 0) {
+    const renderAdmin = () => {
+      switch(nav) {
+        case "admin_dashboard":    return <VistaAdminDashboard defensas={defensas} onNav={handleNav}/>;
+        case "admin_delegados":    return <VistaAdminDelegados/>;
+        case "admin_pagos":        return <VistaAdminPagos/>;
+        case "admin_crear":        return <VistaAdminCrearDefensa onBack={() => setNav("admin_defensas")} onCreada={() => { cargarDefensas(); setNav("admin_defensas"); }}/>;
+        case "admin_defensas":
+        default:
+          return <VistaAdminDefensas defensas={defensas} loading={loading} delegados={delegados} onIrCrear={() => setNav("admin_crear")} onRecargar={() => { cargarDefensas(); cargarDelegados(); }}/>;
+      }
+    };
+    return (
+      <div className="admin-shell">
+        <AdminSidebar usuario={usuario} active={nav} onChange={handleNav} onLogout={onLogout}/>
+        <div className="admin-content">{renderAdmin()}</div>
+      </div>
     );
-    if (evidencia) return (
-      <VistaEvidencia usuario={usuario} defensa={evidencia}
-        onBack={() => setEvidencia(null)}
-        onEnviar={handleEvidencia}/>
-    );
-    switch (nav) {
-      case "inicio":      return <VistaInicio      usuario={usuario} defensas={defensas} loading={loading} onDetalle={d => setDetalle(d)} onEvidencia={d => setEvidencia(d)}/>;
+  }
+
+  // ── Render Delegado ───────────────────────────────────
+  const renderDelegado = () => {
+    if (detalle) return <VistaDetalle usuario={usuario} defensa={detalle} onBack={() => setDetalle(null)} onAceptar={handleAceptar} onRechazar={handleRechazar}/>;
+    if (evidencia) return <VistaEvidencia usuario={usuario} defensa={evidencia} onBack={() => setEvidencia(null)} onEnviar={handleEvidencia}/>;
+    switch(nav) {
+      case "inicio":      return <VistaInicio      usuario={usuario} defensas={defensas} loading={loading} onNav={handleNav}/>;
       case "nuevas":      return <VistaNuevas      usuario={usuario} defensas={defensas} loading={loading} onDetalle={d => setDetalle(d)}/>;
       case "pendientes":  return <VistaPendientes  usuario={usuario} defensas={defensas} loading={loading} onEvidencia={d => setEvidencia(d)}/>;
       case "completadas": return <VistaCompletadas usuario={usuario} defensas={defensas} loading={loading}/>;
@@ -727,7 +1106,7 @@ export default function Dashboard({ usuario, onLogout }: DashboardProps) {
 
   return (
     <div className="dashboard">
-      {renderVista()}
+      {renderDelegado()}
       <BottomNav active={nav} onChange={handleNav}/>
     </div>
   );
