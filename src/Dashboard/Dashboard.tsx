@@ -714,150 +714,212 @@ function VistaAdminDefensas({ defensas, loading, delegados, onIrCrear, onRecarga
   );
 }
 
-function VistaAdminCrearDefensa({ onBack, onCreada }: { onBack: () => void; onCreada: () => void }) {
-  const [form, setForm] = useState({
-    nombreEstudiante:"", apellidoEstudiante:"", titulo:"",
-    fecha:"", hora:"", lugar:"", direccion:"", observaciones:"",
-  });
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm(prev => ({ ...prev, [k]: e.target.value }));
-
-  const handleCrear = async (e: React.FormEvent) => {
-    e.preventDefault(); setMsg(""); setLoading(true);
-    try {
-      const iso = form.fecha && form.hora
-        ? new Date(`${form.fecha}T${form.hora}:00`).toISOString().slice(0,19).replace("T"," ") : null;
-      const res = await fetch(`${API}/defensas`, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          estudianteNombre: form.nombreEstudiante.trim(),
-          estudianteApellido: form.apellidoEstudiante.trim(),
-          titulo: form.titulo.trim(),
-          fecha: iso,
-          lugar: form.lugar.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!data.ok) setMsg(data.error || "No se pudo crear");
-      else { setMsg("Defensa creada ✓"); setTimeout(() => onCreada(), 1000); }
-    } catch { setMsg("Sin conexión"); } finally { setLoading(false); }
-  };
-
-  return (
-    <>
-      <div className="admin-page-head">
-        <div><h2 className="admin-page-title">Nueva Defensa</h2><p className="admin-page-sub">Completa el formulario para crear una nueva defensa</p></div>
-      </div>
-      <form className="admin-panel" onSubmit={handleCrear}>
-        <button type="button" className="btn-back" style={{marginBottom:16}} onClick={onBack}><Ico d={icons.back} size={16}/> Volver</button>
-        <div className="detail-section">
-          <h4 className="detail-section__title">Información de la Defensa</h4>
-          <p style={{fontSize:".82rem",color:"#9aa5b4",marginBottom:16}}>Los campos marcados con * son obligatorios</p>
-
-          <div className="form__group" style={{marginBottom:14}}>
-            <label className="form__label">Nombre del estudiante *</label>
-            <input className="form__input" placeholder="Ej. María González Pérez"
-              value={form.nombreEstudiante} onChange={set("nombreEstudiante")} required/>
-          </div>
-          <div className="form__group" style={{marginBottom:14}}>
-            <label className="form__label">Título o perfil de tesis *</label>
-            <textarea className="form__textarea" style={{minHeight:70}} placeholder="Ej. Estrategias de Marketing Digital en Redes Sociales"
-              value={form.titulo} onChange={set("titulo")} required/>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-            <div className="form__group">
-              <label className="form__label">Fecha *</label>
-              <input type="date" className="form__input" value={form.fecha} onChange={set("fecha")} required/>
-            </div>
-            <div className="form__group">
-              <label className="form__label">Hora *</label>
-              <input type="time" className="form__input" value={form.hora} onChange={set("hora")} required/>
-            </div>
-          </div>
-          <div className="form__group" style={{marginBottom:14}}>
-            <label className="form__label">Lugar *</label>
-            <input className="form__input" placeholder="Ej. Auditorio Principal" value={form.lugar} onChange={set("lugar")} required/>
-          </div>
-          <div className="form__group" style={{marginBottom:14}}>
-            <label className="form__label">Dirección *</label>
-            <input className="form__input" placeholder="Ej. Av. Heroinas #1234, Cochabamba" value={form.direccion} onChange={set("direccion")}/>
-          </div>
-          <div className="form__group" style={{marginBottom:14}}>
-            <label className="form__label">Observaciones</label>
-            <textarea className="form__textarea" placeholder="Notas adicionales, requerimientos especiales, etc."
-              value={form.observaciones} onChange={set("observaciones")}/>
-          </div>
-          {msg && <p className={msg.includes("✓") ? "form__msg--ok" : "form__error"} style={{marginBottom:12}}>{msg}</p>}
-          <div style={{display:"flex",gap:10}}>
-            <button className="btn-primary" type="submit" disabled={loading}>
-              <Ico d={icons.doc} size={16}/> {loading ? "Creando..." : "Crear defensa"}
-            </button>
-            <button className="btn-outline" type="button" onClick={onBack}>
-              <Ico d={icons.close} size={16}/> Cancelar
-            </button>
-          </div>
-        </div>
-      </form>
-    </>
-  );
-}
 
 function VistaAdminDelegados() {
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading]     = useState(true);
   const [delegados, setDelegados] = useState<Delegado[]>([]);
-  const [error, setError]       = useState("");
-  const [modal, setModal]       = useState<{mode:"new"|"edit";delegado?:Delegado}|null>(null);
-  const [form, setForm]         = useState({ nombre:"", apellido:"", correo:"", telefono:"", password:"" });
+  const [error, setError]         = useState("");
+  const [modal, setModal]         = useState<{ mode: "new" | "edit"; delegado?: Delegado } | null>(null);
+  const [form, setForm]           = useState({ nombre:"", apellido:"", correo:"", telefono:"", password:"" });
+  const [errors, setErrors]       = useState({ nombre:"", apellido:"", correo:"", telefono:"", password:"" });
+
+  const limpiarFormulario = () => {
+    setForm({ nombre:"", apellido:"", correo:"", telefono:"", password:"" });
+    setErrors({ nombre:"", apellido:"", correo:"", telefono:"", password:"" });
+  };
 
   const cargar = () => {
-    setLoading(true); setError("");
-    fetch(`${API}/admin/delegados`).then(r=>r.json())
-      .then(d => { if(d.ok) setDelegados(d.delegados||[]); else setError(d.mensaje||"Error"); })
-      .catch(() => setError("Sin conexión")).finally(() => setLoading(false));
+    setLoading(true);
+    setError("");
+    fetch(`${API}/admin/delegados`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) setDelegados(d.delegados || []);
+        else setError(d.mensaje || "Error");
+      })
+      .catch(() => setError("Sin conexión"))
+      .finally(() => setLoading(false));
   };
+
   useEffect(() => { cargar(); }, []);
 
+  const validarForm = () => {
+    const nuevosErrores = {
+      nombre: "",
+      apellido: "",
+      correo: "",
+      telefono: "",
+      password: "",
+    };
+
+    const nombre = form.nombre.trim();
+    const apellido = form.apellido.trim();
+    const correo = form.correo.trim();
+    const telefono = form.telefono.trim();
+    const password = form.password;
+
+    if (!nombre) {
+      nuevosErrores.nombre = "El nombre es obligatorio";
+    } else if (nombre.length < 2) {
+      nuevosErrores.nombre = "El nombre debe tener al menos 2 caracteres";
+    } else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(nombre)) {
+      nuevosErrores.nombre = "El nombre solo debe contener letras";
+    }
+
+    if (!apellido) {
+      nuevosErrores.apellido = "El apellido es obligatorio";
+    } else if (apellido.length < 2) {
+      nuevosErrores.apellido = "El apellido debe tener al menos 2 caracteres";
+    } else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(apellido)) {
+      nuevosErrores.apellido = "El apellido solo debe contener letras";
+    }
+
+    if (!correo) {
+      nuevosErrores.correo = "El correo es obligatorio";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      nuevosErrores.correo = "Ingresa un correo válido";
+    }
+
+    if (!telefono) {
+      nuevosErrores.telefono = "El teléfono es obligatorio";
+    } else if (!/^\d{7,15}$/.test(telefono)) {
+      nuevosErrores.telefono = "El teléfono debe tener entre 7 y 15 dígitos";
+    }
+
+    if (modal?.mode === "new") {
+      if (!password.trim()) {
+        nuevosErrores.password = "La contraseña es obligatoria";
+      } else if (password.length < 6) {
+        nuevosErrores.password = "La contraseña debe tener al menos 6 caracteres";
+      }
+    } else {
+      if (password.trim() && password.length < 6) {
+        nuevosErrores.password = "La nueva contraseña debe tener al menos 6 caracteres";
+      }
+    }
+
+    setErrors(nuevosErrores);
+    return !Object.values(nuevosErrores).some(v => v);
+  };
+
   const save = async () => {
+    if (!validarForm()) return;
+
     try {
       if (modal?.mode === "new") {
-        const res = await fetch(`${API}/admin/delegados`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(form) });
-        const d = await res.json(); if (!d.ok) throw new Error(d.mensaje||"Error");
+        const res = await fetch(`${API}/admin/delegados`, {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({
+            nombre: form.nombre.trim(),
+            apellido: form.apellido.trim(),
+            correo: form.correo.trim(),
+            telefono: form.telefono.trim(),
+            password: form.password,
+          }),
+        });
+        const d = await res.json();
+        if (!d.ok) throw new Error(d.mensaje || "Error");
       } else if (modal?.mode === "edit" && modal.delegado) {
-        const res = await fetch(`${API}/admin/delegados/${modal.delegado.idUsuario}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(form) });
-        const d = await res.json(); if (!d.ok) throw new Error(d.mensaje||"Error");
+        const payload: any = {
+          nombre: form.nombre.trim(),
+          apellido: form.apellido.trim(),
+          correo: form.correo.trim(),
+          telefono: form.telefono.trim(),
+        };
+
+        if (form.password.trim()) {
+          payload.password = form.password;
+        }
+
+        const res = await fetch(`${API}/admin/delegados/${modal.delegado.idUsuario}`, {
+          method:"PUT",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(payload),
+        });
+        const d = await res.json();
+        if (!d.ok) throw new Error(d.mensaje || "Error");
       }
-      setModal(null); cargar();
-    } catch(e: any) { setError(e.message||"Error"); }
+
+      setModal(null);
+      limpiarFormulario();
+      cargar();
+    } catch (e: any) {
+      setError(e.message || "Error");
+    }
   };
 
   const setActivo = async (id: number, activo: boolean) => {
-    await fetch(`${API}/admin/usuario/${id}/activo`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ activo }) });
+    await fetch(`${API}/admin/usuario/${id}/activo`, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ activo }),
+    });
     cargar();
   };
 
   return (
     <>
       <div className="admin-page-head">
-        <div><h2 className="admin-page-title">Gestión de Delegados</h2><p className="admin-page-sub">Administra los delegados registrados</p></div>
-        <button className="btn-primary" onClick={() => { setForm({nombre:"",apellido:"",correo:"",telefono:"",password:""}); setModal({mode:"new"}); }}>
+        <div>
+          <h2 className="admin-page-title">Gestión de Delegados</h2>
+          <p className="admin-page-sub">Administra los delegados registrados</p>
+        </div>
+
+        <button
+          className="btn-primary"
+          onClick={() => {
+            limpiarFormulario();
+            setModal({ mode:"new" });
+          }}
+        >
           <Ico d={icons.userPlus} size={16}/> Asignar delegado
         </button>
       </div>
+
       <div className="admin-panel">
-        <h3 className="page-title" style={{marginBottom:16}}>Todos los delegados</h3>
+        <h3 className="page-title" style={{ marginBottom:16 }}>Todos los delegados</h3>
+
         {loading ? <Spinner/> : (
           <>
-            {error && <p className="form__error" style={{marginBottom:12}}>{error}</p>}
+            {error && <p className="form__error" style={{ marginBottom:12 }}>{error}</p>}
+
             <div className="table-wrap">
               <table className="table">
-                <thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Estado</th><th>Defensas asignadas</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th>Defensas asignadas</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {delegados.length === 0
-                    ? <tr><td colSpan={5} style={{textAlign:"center",color:"#9aa5b4",padding:"32px"}}>Sin delegados</td></tr>
+                    ? (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign:"center", color:"#9aa5b4", padding:"32px" }}>
+                          Sin delegados
+                        </td>
+                      </tr>
+                    )
                     : delegados.map(d => (
-                      <tr key={d.idUsuario} style={{cursor:"pointer"}} onClick={() => { setForm({nombre:d.nombre,apellido:d.apellido,correo:d.correo,telefono:d.telefono||"",password:""}); setModal({mode:"edit",delegado:d}); }}>
+                      <tr
+                        key={d.idUsuario}
+                        style={{ cursor:"pointer" }}
+                        onClick={() => {
+                          setForm({
+                            nombre: d.nombre || "",
+                            apellido: d.apellido || "",
+                            correo: d.correo || "",
+                            telefono: d.telefono || "",
+                            password: "",
+                          });
+                          setErrors({ nombre:"", apellido:"", correo:"", telefono:"", password:"" });
+                          setModal({ mode:"edit", delegado:d });
+                        }}
+                      >
                         <td className="td-bold">{d.nombre} {d.apellido}</td>
                         <td>{d.correo}</td>
                         <td>{d.telefono || "-"}</td>
@@ -880,30 +942,135 @@ function VistaAdminDelegados() {
       </div>
 
       {modal && (
-        <Modal title={modal.mode==="new"?"Nuevo delegado":"Editar delegado"} onClose={() => setModal(null)}>
+        <Modal
+          title={modal.mode === "new" ? "Nuevo delegado" : "Editar delegado"}
+          onClose={() => {
+            setModal(null);
+            limpiarFormulario();
+          }}
+        >
           <div className="modal__body">
-            {(["nombre","apellido","correo","telefono","password"] as const).map(k => (
-              <div key={k} className="form__group" style={{marginBottom:12}}>
-                <label className="form__label">
-                  {k==="password"?(modal.mode==="new"?"Contraseña *":"Nueva contraseña (opcional)"):k.charAt(0).toUpperCase()+k.slice(1)+" *"}
-                </label>
-                <input className="form__input" type={k==="password"?"password":k==="correo"?"email":"text"}
-                  value={form[k]} onChange={e => setForm({...form,[k]:e.target.value})}/>
-              </div>
-            ))}
+            <div className="form__group" style={{ marginBottom:12 }}>
+              <label className="form__label">Nombre *</label>
+              <input
+                className="form__input"
+                type="text"
+                value={form.nombre}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, nombre: value });
+                  setErrors({ ...errors, nombre: "" });
+                }}
+              />
+              {errors.nombre && <p className="form__error" style={{ marginTop:6 }}>{errors.nombre}</p>}
+            </div>
+
+            <div className="form__group" style={{ marginBottom:12 }}>
+              <label className="form__label">Apellido *</label>
+              <input
+                className="form__input"
+                type="text"
+                value={form.apellido}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, apellido: value });
+                  setErrors({ ...errors, apellido: "" });
+                }}
+              />
+              {errors.apellido && <p className="form__error" style={{ marginTop:6 }}>{errors.apellido}</p>}
+            </div>
+
+            <div className="form__group" style={{ marginBottom:12 }}>
+              <label className="form__label">Correo *</label>
+              <input
+                className="form__input"
+                type="email"
+                value={form.correo}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, correo: value });
+                  setErrors({ ...errors, correo: "" });
+                }}
+              />
+              {errors.correo && <p className="form__error" style={{ marginTop:6 }}>{errors.correo}</p>}
+            </div>
+
+            <div className="form__group" style={{ marginBottom:12 }}>
+              <label className="form__label">Telefono *</label>
+              <input
+                className="form__input"
+                type="text"
+                inputMode="numeric"
+                value={form.telefono}
+                onChange={e => {
+                  const value = e.target.value.replace(/\D/g, "");
+                  setForm({ ...form, telefono: value });
+                  setErrors({ ...errors, telefono: "" });
+                }}
+              />
+              {errors.telefono && <p className="form__error" style={{ marginTop:6 }}>{errors.telefono}</p>}
+            </div>
+
+            <div className="form__group" style={{ marginBottom:12 }}>
+              <label className="form__label">
+                {modal.mode === "new" ? "Contraseña *" : "Nueva contraseña (opcional)"}
+              </label>
+              <input
+                className="form__input"
+                type="password"
+                value={form.password}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, password: value });
+                  setErrors({ ...errors, password: "" });
+                }}
+              />
+              {errors.password && <p className="form__error" style={{ marginTop:6 }}>{errors.password}</p>}
+            </div>
+
             {modal.mode === "edit" && modal.delegado && (
-              <div style={{display:"flex",gap:8,marginTop:4}}>
-                {modal.delegado.activo
-                  ? <button className="btn-outline" type="button" onClick={() => { setActivo(modal.delegado!.idUsuario, false); setModal(null); }}>Desactivar</button>
-                  : <button className="btn-outline" type="button" onClick={() => { setActivo(modal.delegado!.idUsuario, true); setModal(null); }}>Activar</button>
-                }
+              <div style={{ display:"flex", gap:8, marginTop:4 }}>
+                {modal.delegado.activo ? (
+                  <button
+                    className="btn-outline"
+                    type="button"
+                    onClick={() => {
+                      setActivo(modal.delegado!.idUsuario, false);
+                      setModal(null);
+                      limpiarFormulario();
+                    }}
+                  >
+                    Desactivar
+                  </button>
+                ) : (
+                  <button
+                    className="btn-outline"
+                    type="button"
+                    onClick={() => {
+                      setActivo(modal.delegado!.idUsuario, true);
+                      setModal(null);
+                      limpiarFormulario();
+                    }}
+                  >
+                    Activar
+                  </button>
+                )}
               </div>
             )}
           </div>
+
           <div className="modal__footer">
-            <button className="btn-outline" onClick={() => setModal(null)}>Cancelar</button>
-            <button className="btn-primary" onClick={save}
-              disabled={!form.nombre.trim()||!form.apellido.trim()||!form.correo.trim()||(modal.mode==="new"&&!form.password)}>
+            <button
+              className="btn-outline"
+              onClick={() => {
+                setModal(null);
+                limpiarFormulario();
+              }}
+            >
+              Cancelar
+            </button>
+
+            <button className="btn-primary" onClick={save}>
               Guardar
             </button>
           </div>
