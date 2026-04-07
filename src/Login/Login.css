@@ -117,6 +117,39 @@
   box-shadow: 0 0 0 3px rgba(29,61,107,0.10);
 }
 
+.input-eye-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-eye-wrap .form__input {
+  padding-right: 44px;
+}
+
+.btn-eye {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: var(--gray-400);
+  transition: color var(--transition);
+}
+
+.btn-eye:hover { color: var(--navy-mid); }
+
+.codigo-input {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 10px;
+  color: var(--navy);
+}
+
 /* Error message */
 .form__error {
   background: #fff0f0;
@@ -184,3 +217,45 @@
   .card__header { padding: 32px 24px 30px; }
   .card__body   { padding: 28px 24px 32px; }
 }
+
+/* ─── Olvidaste tu contraseña ────────────────────────── */
+.form__forgot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+.btn-forgot {
+  background: transparent;
+  border: none;
+  color: var(--navy-mid);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .82rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--transition);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.btn-forgot:hover { color: var(--navy); }
+
+/* ─── Recuperar header ───────────────────────────────── */
+.recuperar-header { margin-bottom: 4px; }
+.recuperar-title  { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.recuperar-sub    { font-size: .83rem; color: var(--text-light); line-height: 1.5; }
+
+/* ─── Botón volver en recuperar ──────────────────────── */
+.btn-back-login {
+  background: transparent;
+  border: none;
+  color: var(--gray-600);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .82rem;
+  cursor: pointer;
+  padding: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color var(--transition);
+}
+.btn-back-login:hover { color: var(--navy); }

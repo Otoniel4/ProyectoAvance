@@ -1,11 +1,32 @@
-require("dotenv").config({ path: __dirname + "/.env" });
+require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 const express = require("express");
 const mysql   = require("mysql2/promise");
 const cors    = require("cors");
+const multer  = require("multer");
+const path    = require("path");
+const fs      = require("fs");
+
+// ── Multer: almacenamiento de evidencias ───────────────────────
+const uploadsDir = path.join(__dirname, "uploads", "evidencias");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e6);
+    cb(null, unique + path.extname(file.originalname));
+  },
+});
+const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
+
 
 const app = express();
-app.use(cors({ origin: "http://localhost:3000" }));
+app.use(cors({
+  origin: (_origin, cb) => cb(null, true),
+  credentials: true,
+}));
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ── Pool de conexión ───────────────────────────────────────────
 const pool = mysql.createPool({
@@ -80,14 +101,18 @@ app.get("/api/defensas/:idDelegado", async (req, res) => {
          d.fecha,
          d.lugar,
          d.estado,
+         d.idAsignacion,
          pt.titulo,
-         e.nombre   AS nombreEstudiante,
-         e.apellido AS apellidoEstudiante,
-         ad.estado  AS estadoAsignacion
+         e.nombre        AS nombreEstudiante,
+         e.apellido      AS apellidoEstudiante,
+         ad.idAsignacion AS idAsignacion,
+         ad.estado       AS estadoAsignacion,
+         p.estado        AS estadoPago
        FROM AsignacionDelegado ad
        JOIN Defensa        d  ON ad.idDefensa   = d.idDefensa
        JOIN PerfilTesis    pt ON d.idPerfil      = pt.idPerfil
        JOIN Estudiante     e  ON pt.idEstudiante = e.idEstudiante
+       LEFT JOIN Pago      p  ON d.idDefensa     = p.idDefensa
        WHERE ad.idDelegado = ?
        ORDER BY d.fecha DESC`,
       [idDelegado]
@@ -121,16 +146,17 @@ app.get("/api/defensas", async (req, res) => {
   }
 });
 
-app.listen(5000, "0.0.0.0", () => console.log("Backend corriendo en http://localhost:5000"));
+app.listen(5000, () => console.log("Backend corriendo en http://localhost:5000"));
 
 // ── Actualizar estado de asignación (aceptar/rechazar) ─────────
 app.put("/api/asignacion/:id/estado", async (req, res) => {
   const { id } = req.params;
   const { estado, justificacion } = req.body;
+  if (!estado) return res.status(400).json({ ok: false, mensaje: "Estado requerido" });
   try {
     await pool.query(
-      "UPDATE AsignacionDelegado SET estado = ? WHERE idAsignacion = ?",
-      [estado, id]
+      "UPDATE AsignacionDelegado SET estado = ?, justificacion = ? WHERE idAsignacion = ?",
+      [estado, justificacion || null, id]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -138,16 +164,19 @@ app.put("/api/asignacion/:id/estado", async (req, res) => {
   }
 });
 
-// ── Completar defensa ──────────────────────────────────────────
-app.put("/api/asignacion/:id/completar", async (req, res) => {
+// ── Completar defensa (con archivos) ──────────────────────────
+app.put("/api/asignacion/:id/completar",
+  upload.fields([{ name: "imagen", maxCount: 1 }, { name: "pdf", maxCount: 1 }]),
+  async (req, res) => {
   const { id } = req.params;
-  const { comentarios } = req.body;
+  const comentarios = req.body.comentarios || "";
+  const files = req.files || {};
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
   try {
     await pool.query(
       "UPDATE AsignacionDelegado SET estado = 'completada' WHERE idAsignacion = ?",
       [id]
     );
-    // Obtener idDefensa
     const [rows] = await pool.query(
       "SELECT idDefensa FROM AsignacionDelegado WHERE idAsignacion = ?", [id]
     );
@@ -156,11 +185,15 @@ app.put("/api/asignacion/:id/completar", async (req, res) => {
         "UPDATE Defensa SET estado = 'completada' WHERE idDefensa = ?",
         [rows[0].idDefensa]
       );
-      // Insertar evidencia con comentario si hay
-      if (comentarios) {
+      // Insertar fila por cada archivo subido
+      const inserts = [];
+      if (files.imagen?.[0]) inserts.push(`${baseUrl}/uploads/evidencias/${files.imagen[0].filename}`);
+      if (files.pdf?.[0])    inserts.push(`${baseUrl}/uploads/evidencias/${files.pdf[0].filename}`);
+      if (comentarios)       inserts.push(comentarios);
+      for (const url of inserts) {
         await pool.query(
           "INSERT INTO Evidencia (idAsignacion, urlArchivo) VALUES (?, ?)",
-          [id, comentarios]
+          [id, url]
         );
       }
     }
@@ -174,6 +207,12 @@ app.put("/api/asignacion/:id/completar", async (req, res) => {
 app.put("/api/usuario/:id/password", async (req, res) => {
   const { id } = req.params;
   const { actual, nueva } = req.body;
+  if (!actual || !nueva)
+    return res.status(400).json({ ok: false, mensaje: "Campos requeridos" });
+  if (nueva.length < 6)
+    return res.status(400).json({ ok: false, mensaje: "La nueva contraseña debe tener al menos 6 caracteres" });
+  if (actual === nueva)
+    return res.status(400).json({ ok: false, mensaje: "La nueva contraseña debe ser diferente a la actual" });
   try {
     const [rows] = await pool.query(
       "SELECT idUsuario FROM Usuario WHERE idUsuario = ? AND hashContrasena = ?",
@@ -206,10 +245,15 @@ app.get("/api/admin/delegados", async (req, res) => {
 // ── ADMIN: Crear delegado ──────────────────────────────
 app.post("/api/admin/delegados", async (req, res) => {
   const { nombre, apellido, correo, telefono, password } = req.body;
+  if (!nombre?.trim() || !apellido?.trim() || !correo?.trim() || !password)
+    return res.status(400).json({ ok: false, mensaje: "Todos los campos obligatorios son requeridos" });
   try {
+    const [exist] = await pool.query("SELECT idUsuario FROM Usuario WHERE correo = ?", [correo.trim()]);
+    if (exist.length > 0)
+      return res.status(400).json({ ok: false, mensaje: "Ya existe un usuario con ese correo" });
     await pool.query(
       "INSERT INTO Usuario (rol, nombre, apellido, correo, telefono, hashContrasena) VALUES (1, ?, ?, ?, ?, ?)",
-      [nombre, apellido, correo, telefono || null, password]
+      [nombre.trim(), apellido.trim(), correo.trim(), telefono || null, password]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -222,6 +266,11 @@ app.put("/api/admin/delegados/:id", async (req, res) => {
   const { id } = req.params;
   const { nombre, apellido, correo, telefono, password } = req.body;
   try {
+    const [exist] = await pool.query(
+      "SELECT idUsuario FROM Usuario WHERE correo = ? AND idUsuario != ?", [correo?.trim(), id]
+    );
+    if (exist.length > 0)
+      return res.status(400).json({ ok: false, mensaje: "Ese correo ya está en uso por otro usuario" });
     if (password) {
       await pool.query(
         "UPDATE Usuario SET nombre=?, apellido=?, correo=?, telefono=?, hashContrasena=? WHERE idUsuario=?",
@@ -233,6 +282,32 @@ app.put("/api/admin/delegados/:id", async (req, res) => {
         [nombre, apellido, correo, telefono || null, id]
       );
     }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Notificaciones usuario ─────────────────────────────
+app.get("/api/usuario/:id/notificaciones", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query(
+      "SELECT notificaciones FROM Usuario WHERE idUsuario = ?", [id]
+    );
+    res.json({ ok: true, notificaciones: rows[0]?.notificaciones ?? 1 });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.put("/api/usuario/:id/notificaciones", async (req, res) => {
+  const { id } = req.params;
+  const { notificaciones } = req.body;
+  try {
+    await pool.query(
+      "UPDATE Usuario SET notificaciones = ? WHERE idUsuario = ?", [notificaciones ? 1 : 0, id]
+    );
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
@@ -264,7 +339,12 @@ app.put("/api/admin/usuario/:id/activo", async (req, res) => {
 
 // ── ADMIN: Crear defensa completa ──────────────────────
 app.post("/api/defensas", async (req, res) => {
-  const { estudianteNombre, estudianteApellido, titulo, fecha, lugar } = req.body;
+  const { estudianteNombre, estudianteApellido, titulo, fecha, lugar,
+          direccion, enlaceGoogleMaps, observaciones } = req.body;
+  if (!estudianteNombre?.trim() || !estudianteApellido?.trim() || !titulo?.trim() || !fecha || !lugar?.trim())
+    return res.status(400).json({ ok: false, error: "Faltan campos obligatorios" });
+  if (new Date(fecha) < new Date())
+    return res.status(400).json({ ok: false, error: "La fecha de la defensa no puede ser en el pasado" });
   try {
     const [estResult] = await pool.query(
       "INSERT INTO Estudiante (nombre, apellido) VALUES (?, ?)",
@@ -276,13 +356,12 @@ app.post("/api/defensas", async (req, res) => {
       "INSERT INTO PerfilTesis (idEstudiante, titulo) VALUES (?, ?)",
       [idEstudiante, titulo]
     );
-
-
     const idPerfil = perfResult.insertId;
 
     await pool.query(
-      "INSERT INTO Defensa (idPerfil, fecha, lugar, estado) VALUES (?, ?, ?, 'pendiente')",
-      [idPerfil, fecha, lugar]
+      `INSERT INTO Defensa (idPerfil, fecha, lugar, direccion, enlaceGoogleMaps, observaciones, estado)
+       VALUES (?, ?, ?, ?, ?, ?, 'pendiente')`,
+      [idPerfil, fecha, lugar, direccion || null, enlaceGoogleMaps || null, observaciones || null]
     );
 
     res.json({ ok: true });
@@ -293,7 +372,7 @@ app.post("/api/defensas", async (req, res) => {
 
 // ── GET defensas con delegado asignado (Admin) ─────────
 // Reemplaza el endpoint GET /api/defensas existente con uno mejorado
-app.get("/api/admin/defensas", async (req, res) => {
+app.get("/api/defensas/admin", async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT
@@ -301,12 +380,14 @@ app.get("/api/admin/defensas", async (req, res) => {
          pt.titulo,
          e.nombre AS nombreEstudiante, e.apellido AS apellidoEstudiante,
          ad.idAsignacion, ad.estado AS estadoAsignacion,
-         u.nombre AS nombreDelegado, u.apellido AS apellidoDelegado
+         u.nombre AS nombreDelegado, u.apellido AS apellidoDelegado,
+         p.estado AS estadoPago
        FROM Defensa d
        JOIN PerfilTesis pt ON d.idPerfil = pt.idPerfil
        JOIN Estudiante e ON pt.idEstudiante = e.idEstudiante
        LEFT JOIN AsignacionDelegado ad ON d.idDefensa = ad.idDefensa
        LEFT JOIN Usuario u ON ad.idDelegado = u.idUsuario
+       LEFT JOIN Pago p ON d.idDefensa = p.idDefensa
        ORDER BY d.fecha DESC`
     );
     res.json({ ok: true, defensas: rows });
@@ -320,6 +401,11 @@ app.post("/api/defensas/:id/asignar", async (req, res) => {
   const { id } = req.params;
   const { idDelegado } = req.body;
   try {
+    const [delegado] = await pool.query(
+      "SELECT idUsuario FROM Usuario WHERE idUsuario = ? AND activo = 1 AND rol = 1", [idDelegado]
+    );
+    if (delegado.length === 0)
+      return res.status(400).json({ ok: false, error: "El delegado no está activo o no existe" });
     // Verificar si ya existe asignación
     const [existing] = await pool.query(
       "SELECT idAsignacion FROM AsignacionDelegado WHERE idDefensa = ?", [id]
@@ -403,6 +489,125 @@ app.get("/api/admin/delegados/detalle", async (req, res) => {
        ORDER BY u.nombre ASC`
     );
     res.json({ ok: true, delegados: rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════
+// RECUPERACION DE CONTRASEÑA (código de 6 dígitos)
+// ════════════════════════════════════════════════════════
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// ── Solicitar código de recuperación ──────────────────
+app.post("/api/recuperar-password", async (req, res) => {
+  const { correo } = req.body;
+  if (!correo) return res.status(400).json({ ok: false, mensaje: "Correo requerido" });
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT idUsuario, nombre FROM Usuario WHERE correo = ? AND activo = 1",
+      [correo]
+    );
+
+    if (rows.length === 0)
+      return res.json({ ok: true });
+
+    const usuario = rows[0];
+    const codigo  = Math.floor(100000 + Math.random() * 900000).toString();
+    const expira  = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    await pool.query(
+      `INSERT INTO ResetPassword (idUsuario, token, expira, usado)
+       VALUES (?, ?, ?, 0)
+       ON DUPLICATE KEY UPDATE token = ?, expira = ?, usado = 0`,
+      [usuario.idUsuario, codigo, expira, codigo, expira]
+    );
+
+    await transporter.sendMail({
+      from: `"Colegio de Marketing" <${process.env.EMAIL_USER}>`,
+      to: correo,
+      subject: "Código de recuperación - Colegio de Marketing",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
+          <div style="background: #1d3d6b; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h2 style="color: white; margin: 0;">Colegio de Marketing</h2>
+            <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0;">Sistema de Gestión de Defensas de Tesis</p>
+          </div>
+          <div style="background: #f8f9fb; padding: 28px; border-radius: 0 0 12px 12px; border: 1px solid #e8ecf2;">
+            <p style="color: #1a202c; font-size: 15px;">Hola <strong>${usuario.nombre}</strong>,</p>
+            <p style="color: #4a5568; font-size: 14px; line-height: 1.6;">
+              Recibimos una solicitud para restablecer tu contraseña.<br/>
+              Ingresa el siguiente código en la aplicación:
+            </p>
+            <div style="text-align: center; margin: 28px 0;">
+              <span style="background: #1d3d6b; color: white; padding: 16px 40px;
+                           border-radius: 10px; font-size: 32px; font-weight: bold;
+                           letter-spacing: 10px; display: inline-block;">
+                ${codigo}
+              </span>
+            </div>
+            <p style="color: #9aa5b4; font-size: 12px; text-align: center;">
+              Este código expira en <strong>15 minutos</strong>.<br/>
+              Si no solicitaste esto, ignora este correo.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Verificar código y resetear contraseña ─────────────
+app.post("/api/reset-password", async (req, res) => {
+  const { correo, codigo, nuevaPassword } = req.body;
+  if (!correo || !codigo || !nuevaPassword)
+    return res.status(400).json({ ok: false, mensaje: "Datos incompletos" });
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT rp.idUsuario, rp.expira, rp.usado
+       FROM ResetPassword rp
+       JOIN Usuario u ON u.idUsuario = rp.idUsuario
+       WHERE u.correo = ? AND rp.token = ?`,
+      [correo, codigo]
+    );
+
+    if (rows.length === 0)
+      return res.status(400).json({ ok: false, mensaje: "Código incorrecto" });
+
+    const reset = rows[0];
+
+    if (reset.usado)
+      return res.status(400).json({ ok: false, mensaje: "Este código ya fue usado" });
+
+    if (new Date() > new Date(reset.expira))
+      return res.status(400).json({ ok: false, mensaje: "El código ha expirado" });
+
+    await pool.query(
+      "UPDATE Usuario SET hashContrasena = ? WHERE idUsuario = ?",
+      [nuevaPassword, reset.idUsuario]
+    );
+
+    await pool.query(
+      "UPDATE ResetPassword SET usado = 1 WHERE idUsuario = ?",
+      [reset.idUsuario]
+    );
+
+    res.json({ ok: true, mensaje: "Contraseña actualizada correctamente" });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
-
+import mammoth from "mammoth";
 const API = `http://${window.location.hostname}:5000/api`;
 
 // ════════════════════════════════════════════════════════
@@ -29,6 +29,9 @@ interface Defensa {
   apellidoEstudiante: string;
   nombreDelegado?: string;
   apellidoDelegado?: string;
+  direccion?: string;
+  enlaceGoogleMaps?: string;
+  observaciones?: string;
 }
 
 interface Delegado {
@@ -297,7 +300,20 @@ function VistaDetalle({ usuario, defensa, onBack, onAceptar, onRechazar }: {
         <div className="detail-section">
           <h4 className="detail-section__title">Ubicación</h4>
           <div className="detail-field"><span className="detail-field__label">Lugar</span><span className="detail-field__value">{defensa.lugar || "Sin lugar"}</span></div>
+          {defensa.direccion && <div className="detail-field"><span className="detail-field__label">Dirección</span><span className="detail-field__value">{defensa.direccion}</span></div>}
+          {defensa.enlaceGoogleMaps && (
+            <div className="detail-field">
+              <span className="detail-field__label">Google Maps</span>
+              <a className="detail-field__value" href={defensa.enlaceGoogleMaps} target="_blank" rel="noreferrer" style={{color:"var(--navy)"}}>Ver ubicación →</a>
+            </div>
+          )}
         </div>
+        {defensa.observaciones && (
+          <div className="detail-section">
+            <h4 className="detail-section__title">Observaciones</h4>
+            <p style={{fontSize:".9rem",color:"#4a5568",lineHeight:1.6}}>{defensa.observaciones}</p>
+          </div>
+        )}
         <div className="detail-actions">
           <button className="btn-primary" disabled={loading} onClick={async () => { setLoading(true); await onAceptar(defensa.idAsignacion); setLoading(false); }}>
             <Ico d={icons.check} size={16}/> Aceptar convocatoria
@@ -316,9 +332,12 @@ function VistaDetalle({ usuario, defensa, onBack, onAceptar, onRechazar }: {
           </div>
           <div className="modal__footer">
             <button className="btn-outline" onClick={() => setModalRechazo(false)}>Cancelar</button>
-            <button className="btn-danger" disabled={!justificacion.trim()} onClick={async () => {
+            <button className="btn-danger" disabled={justificacion.trim().length < 10} onClick={async () => {
               setLoading(true); await onRechazar(defensa.idAsignacion, justificacion); setLoading(false); setModalRechazo(false);
             }}>Confirmar rechazo</button>
+            {justificacion.trim().length > 0 && justificacion.trim().length < 10 && (
+              <p className="form__error" style={{marginTop:6}}>Mínimo 10 caracteres ({justificacion.trim().length}/10)</p>
+            )}
           </div>
         </Modal>
       )}
@@ -447,7 +466,26 @@ function VistaPerfil({ usuario, onLogout }: { usuario: Usuario; onLogout: () => 
   const [passForm, setPassForm]   = useState({ actual:"", nueva:"", confirmar:"" });
   const [passMsg, setPassMsg]     = useState("");
 
+  useEffect(() => {
+    fetch(`${API}/usuario/${usuario.id}/notificaciones`)
+      .then(r => r.json())
+      .then(d => { if (d.ok) setNotifs(!!d.notificaciones); })
+      .catch(() => {});
+  }, [usuario.id]);
+
+  const toggleNotifs = async () => {
+    const nuevo = !notifs;
+    setNotifs(nuevo);
+    await fetch(`${API}/usuario/${usuario.id}/notificaciones`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificaciones: nuevo }),
+    }).catch(() => {});
+  };
+
   const handleChangePass = async () => {
+    if (!passForm.actual) { setPassMsg("Ingresa tu contraseña actual"); return; }
+    if (passForm.nueva.length < 6) { setPassMsg("La nueva contraseña debe tener al menos 6 caracteres"); return; }
+    if (passForm.nueva === passForm.actual) { setPassMsg("La nueva contraseña debe ser diferente a la actual"); return; }
     if (passForm.nueva !== passForm.confirmar) { setPassMsg("Las contraseñas no coinciden"); return; }
     const res = await fetch(`${API}/usuario/${usuario.id}/password`, {
       method:"PUT", headers:{"Content-Type":"application/json"},
@@ -483,7 +521,7 @@ function VistaPerfil({ usuario, onLogout }: { usuario: Usuario; onLogout: () => 
           <h4 className="detail-section__title">Notificaciones</h4>
           <div className="toggle-row">
             <div><p className="toggle-label">Activar notificaciones</p><p className="toggle-sub">Recibir alertas de nuevas convocatorias</p></div>
-            <button className={`toggle ${notifs ? "toggle--on" : ""}`} onClick={() => setNotifs(!notifs)}><span className="toggle__knob"/></button>
+            <button className={`toggle ${notifs ? "toggle--on" : ""}`} onClick={toggleNotifs}><span className="toggle__knob"/></button>
           </div>
         </div>
         <button className="btn-logout-full" onClick={onLogout}><Ico d={icons.logout} size={18}/> Cerrar sesión</button>
@@ -524,7 +562,7 @@ function VistaAdminDashboard({ defensas, onNav }: { defensas: Defensa[]; onNav: 
     { label:"Defensas sin asignar",   value: sinAsignar,        tone:"orange", ico: icons.bell },
     { label:"Convocatorias enviadas", value: defensas.length,   tone:"purple", ico: icons.doc },
     { label:"Defensas completadas",   value: completadas,       tone:"green",  ico: icons.checkCirc },
-    { label:"Pagos pendientes",       value: 0,                 tone:"yellow", ico: icons.dollar },
+    { label:"Pagos pendientes",       value: defensas.filter(x => x.estadoPago === "pendiente").length, tone:"yellow", ico: icons.dollar },
   ];
 
   return (
@@ -581,6 +619,7 @@ function VistaAdminDefensas({ defensas, loading, delegados, onIrCrear, onRecarga
   const [busqueda, setBusqueda]       = useState("");
   const [filtroDelegado, setFiltro]   = useState("");
   const [modalAsignar, setModalAsignar] = useState<Defensa | null>(null);
+  const [modalVer, setModalVer]         = useState<Defensa | null>(null);
   const [busqDelegado, setBusqDelegado] = useState("");
   const [delegadoSel, setDelegadoSel]   = useState<Delegado | null>(null);
   const [msgAsignar, setMsgAsignar]     = useState("");
@@ -670,7 +709,7 @@ function VistaAdminDefensas({ defensas, loading, delegados, onIrCrear, onRecarga
                         <div className="acciones-row">
                           <button className="btn-primary btn-sm" onClick={() => { setModalAsignar(d); setBusqDelegado(""); setDelegadoSel(null); }}>Asignar</button>
                           <button className="btn-danger btn-sm" onClick={() => handleEliminar(d.idDefensa)}>Eliminar</button>
-                          <button className="btn-icon" title="Ver"><Ico d={icons.eye} size={16}/></button>
+                          <button className="btn-icon" title="Ver" onClick={() => setModalVer(d)}><Ico d={icons.eye} size={16}/></button>
                         </div>
                       </td>
                     </tr>
@@ -681,6 +720,31 @@ function VistaAdminDefensas({ defensas, loading, delegados, onIrCrear, onRecarga
           </div>
         }
       </div>
+
+      {modalVer && (
+        <Modal title="Detalle de Defensa" subtitle={modalVer.titulo} onClose={() => setModalVer(null)} wide>
+          <div className="modal__body">
+            {[
+              ["Estudiante",  `${modalVer.nombreEstudiante} ${modalVer.apellidoEstudiante}`],
+              ["Título",      modalVer.titulo],
+              ["Fecha",       fFecha(modalVer.fecha)],
+              ["Hora",        fHora(modalVer.fecha)],
+              ["Lugar",       modalVer.lugar || "—"],
+              ["Delegado",    modalVer.nombreDelegado ? `${modalVer.nombreDelegado} ${modalVer.apellidoDelegado}` : "Sin asignar"],
+              ["Estado",      modalVer.estadoAsignacion || modalVer.estado],
+              ["Pago",        modalVer.estadoPago === "pagado" ? "Pagado" : "Pendiente"],
+            ].map(([label, val]) => (
+              <div key={label} className="detail-field" style={{marginBottom:10}}>
+                <span className="detail-field__label">{label}</span>
+                <span className="detail-field__value">{val}</span>
+              </div>
+            ))}
+          </div>
+          <div className="modal__footer">
+            <button className="btn-outline" onClick={() => setModalVer(null)}>Cerrar</button>
+          </div>
+        </Modal>
+      )}
 
       {modalAsignar && (
         <Modal title="Asignar delegada/o" subtitle="Asignar a una defensa" onClose={() => setModalAsignar(null)}>
@@ -1080,6 +1144,252 @@ function VistaAdminDelegados() {
   );
 }
 
+function VistaAdminCrearDefensa({ onBack, onCreada }: { onBack: () => void; onCreada: () => void }) {
+  const [form, setForm] = useState({
+    nombreCompleto: "", titulo: "", fecha: "", hora: "",
+    lugar: "", direccion: "", enlaceGoogleMaps: "", observaciones: "",
+  });
+  const [errors, setErrors] = useState({
+    nombreCompleto: "", titulo: "", fecha: "", hora: "", lugar: "", direccion: "",
+  });
+  const [archivos, setArchivos] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const agregarArchivos = (e: { target: HTMLInputElement }) => {
+    if (!e.target.files) return;
+    const nuevos = Array.from(e.target.files);
+    setArchivos(prev => {
+      const nombresExistentes = new Set(prev.map(f => f.name));
+      return [...prev, ...nuevos.filter(f => !nombresExistentes.has(f.name))];
+    });
+    e.target.value = "";
+  };
+
+  const quitarArchivo = (nombre: string) =>
+    setArchivos(prev => prev.filter(f => f.name !== nombre));
+
+  const previsualizarArchivo = async (archivo: File) => {
+    const ext = archivo.name.split(".").pop()?.toLowerCase();
+
+    if (ext === "docx") {
+      const buffer = await archivo.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+        <style>body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;padding:0 24px;line-height:1.7;color:#1a202c;}
+        h1,h2,h3{color:#1d3d6b;}</style></head>
+        <body>${result.value}</body></html>`;
+      const blob = new Blob([html], { type: "text/html" });
+      const url  = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+    } else if (ext === "doc") {
+      alert("Los archivos .doc (formato antiguo) no pueden previsualizarse en el navegador.\nConvierte el archivo a .docx o .pdf para poder verlo.");
+    } else {
+      const url = URL.createObjectURL(archivo);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+  };
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const setField = (k: keyof typeof form) =>
+    (e: { target: { value: string } }) =>
+      setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const validar = () => {
+    const e = { nombreCompleto:"", titulo:"", fecha:"", hora:"", lugar:"", direccion:"" };
+    const nombre = form.nombreCompleto.trim();
+    if (!nombre) e.nombreCompleto = "El nombre es obligatorio";
+    else if (nombre.split(" ").filter(Boolean).length < 2) e.nombreCompleto = "Ingresa nombre y apellido";
+    else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(nombre)) e.nombreCompleto = "Solo se permiten letras";
+    if (!form.titulo.trim()) e.titulo = "El título es obligatorio";
+    if (!form.fecha) e.fecha = "La fecha es obligatoria";
+    if (!form.hora) e.hora = "La hora es obligatoria";
+    if (!form.lugar.trim()) e.lugar = "El lugar es obligatorio";
+    if (!form.direccion.trim()) e.direccion = "La dirección es obligatoria";
+    setErrors(e);
+    return !Object.values(e).some(v => v);
+  };
+
+  const handleSubmit = async () => {
+    if (!validar()) return;
+    setSending(true); setError("");
+    try {
+      const partes = form.nombreCompleto.trim().split(" ").filter(Boolean);
+      const estudianteNombre   = partes[0];
+      const estudianteApellido = partes.slice(1).join(" ");
+      const res = await fetch(`${API}/defensas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estudianteNombre,
+          estudianteApellido,
+          titulo:           form.titulo.trim(),
+          fecha:            `${form.fecha}T${form.hora}`,
+          lugar:            form.lugar.trim(),
+          direccion:        form.direccion.trim(),
+          enlaceGoogleMaps: form.enlaceGoogleMaps.trim(),
+          observaciones:    form.observaciones.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Error al crear la defensa");
+      onCreada();
+    } catch (e: any) {
+      setError(e.message || "Sin conexión");
+    } finally { setSending(false); }
+  };
+
+  return (
+    <>
+      <div className="crear-defensa-back">
+        <button className="btn-back-crear" onClick={onBack}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Volver
+        </button>
+      </div>
+
+      <div className="admin-page-head" style={{ marginTop: 8 }}>
+        <div>
+          <h2 className="admin-page-title">Nueva Defensa</h2>
+          <p className="admin-page-sub">Completa el formulario para crear una nueva defensa</p>
+        </div>
+      </div>
+
+      <div className="admin-panel crear-defensa-panel">
+        <div className="crear-defensa-section-head">
+          <h3 className="crear-defensa-section-title">Información de la Defensa</h3>
+          <p className="crear-defensa-section-sub">Los campos marcados con * son obligatorios</p>
+        </div>
+
+        <div className="crear-defensa-fields">
+          {/* Nombre completo */}
+          <div className="form__group">
+            <label className="form__label">Nombre del estudiante *</label>
+            <input className="form__input" value={form.nombreCompleto} onChange={setField("nombreCompleto")}
+              placeholder="Ej: María González Pérez"/>
+            {errors.nombreCompleto && <p className="form__error">{errors.nombreCompleto}</p>}
+          </div>
+
+          {/* Título */}
+          <div className="form__group">
+            <label className="form__label">Título o perfil de tesis *</label>
+            <textarea className="form__input form__textarea" value={form.titulo}
+              onChange={setField("titulo")} rows={3}
+              placeholder="Ej: Estrategias de Marketing Digital en Redes Sociales"/>
+            {errors.titulo && <p className="form__error">{errors.titulo}</p>}
+          </div>
+
+          {/* Fecha y Hora en grid */}
+          <div className="crear-defensa-row">
+            <div className="form__group">
+              <label className="form__label">Fecha *</label>
+              <input className="form__input" type="date" value={form.fecha} onChange={setField("fecha")}/>
+              {errors.fecha && <p className="form__error">{errors.fecha}</p>}
+            </div>
+            <div className="form__group">
+              <label className="form__label">Hora *</label>
+              <input className="form__input" type="time" value={form.hora} onChange={setField("hora")}/>
+              {errors.hora && <p className="form__error">{errors.hora}</p>}
+            </div>
+          </div>
+
+          {/* Lugar */}
+          <div className="form__group">
+            <label className="form__label">Lugar *</label>
+            <input className="form__input" value={form.lugar} onChange={setField("lugar")}
+              placeholder="Ej: Auditorio Principal"/>
+            {errors.lugar && <p className="form__error">{errors.lugar}</p>}
+          </div>
+
+          {/* Dirección */}
+          <div className="form__group">
+            <label className="form__label">Dirección *</label>
+            <input className="form__input" value={form.direccion} onChange={setField("direccion")}
+              placeholder="Ej: Av. Heroínas #1234, Cochabamba"/>
+            {errors.direccion && <p className="form__error">{errors.direccion}</p>}
+          </div>
+
+          {/* Google Maps */}
+          <div className="form__group">
+            <label className="form__label">Enlace de Google Maps</label>
+            <input className="form__input" value={form.enlaceGoogleMaps} onChange={setField("enlaceGoogleMaps")}
+              placeholder="https://maps.google.com/..."/>
+          </div>
+
+          {/* Documentos */}
+          <div className="form__group">
+            <label className="form__label">Subir documentos</label>
+            <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg"
+              style={{ display:"none" }} onChange={agregarArchivos}/>
+            <button type="button" className="btn-elegir-archivo"
+              onClick={() => fileInputRef.current?.click()}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Elegir archivos
+            </button>
+            {archivos.length > 0 && (
+              <ul className="archivos-lista">
+                {archivos.map(f => (
+                  <li key={f.name} className="archivos-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <span className="archivos-nombre archivos-nombre--link"
+                      onClick={() => previsualizarArchivo(f)}
+                      title="Clic para previsualizar">{f.name}</span>
+                    <span className="archivos-size">({(f.size / 1024).toFixed(0)} KB)</span>
+                    <button type="button" className="archivos-quitar"
+                      onClick={() => quitarArchivo(f.name)} title="Quitar archivo">✕</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="form__hint">Puedes subir perfil de tesis, documentos de aprobación, etc.</p>
+          </div>
+
+          {/* Observaciones */}
+          <div className="form__group">
+            <label className="form__label">Observaciones</label>
+            <textarea className="form__input form__textarea" value={form.observaciones}
+              onChange={setField("observaciones")} rows={3}
+              placeholder="Notas adicionales, requerimientos especiales, etc."/>
+          </div>
+        </div>
+
+        {error && <p className="form__error" style={{ marginTop: 8 }}>{error}</p>}
+
+        <div className="crear-defensa-actions">
+          <button className="btn-primary" onClick={handleSubmit} disabled={sending}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            {sending ? "Guardando..." : "Crear defensa"}
+          </button>
+          <button className="btn-outline" onClick={onBack} disabled={sending}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function VistaAdminPagos() {
   const [pagos, setPagos]   = useState<Pago[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1182,10 +1492,9 @@ function AdminSidebar({ usuario, active, onChange, onLogout }: {
         ))}
       </div>
       <div className="admin-user">
-        <div className="admin-user__avatar">AD</div>
+        <div className="admin-user__avatar">{usuario.nombre?.[0]}{usuario.apellido?.[0]}</div>
         <div>
           <div className="admin-user__name">{usuario.nombre} {usuario.apellido}</div>
-          <div className="admin-user__mail">{usuario.correo}</div>
         </div>
       </div>
       <button className="admin-logout" onClick={onLogout} type="button">
@@ -1229,8 +1538,12 @@ export default function Dashboard({ usuario, onLogout }: DashboardProps) {
     setDetalle(null); setNav("nuevas"); cargarDefensas();
   };
 
-  const handleEvidencia = async ({ defensa, comentarios }: any) => {
-    await fetch(`${API}/asignacion/${defensa.idAsignacion}/completar`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({comentarios}) });
+  const handleEvidencia = async ({ defensa, imagen, pdf, comentarios }: any) => {
+    const fd = new FormData();
+    if (imagen) fd.append("imagen", imagen);
+    if (pdf)    fd.append("pdf", pdf);
+    if (comentarios) fd.append("comentarios", comentarios);
+    await fetch(`${API}/asignacion/${defensa.idAsignacion}/completar`, { method: "PUT", body: fd });
     setEvidencia(null); setNav("completadas"); cargarDefensas();
   };
 

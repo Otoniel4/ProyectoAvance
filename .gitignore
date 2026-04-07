@@ -21,4 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-b a c k e n d / . e n v  
+
+# backend
+backend/.env
+backend/node_modules
+backend/uploads
