@@ -12,3 +12,10 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Registrar Service Worker para notificaciones push
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

@@ -1551,6 +1551,30 @@ export default function Dashboard({ usuario, onLogout }: DashboardProps) {
 
   useEffect(() => { cargarDefensas(); cargarDelegados(); }, [usuario]);
 
+  // Suscribir al delegado a notificaciones push
+  useEffect(() => {
+    if (usuario.rol !== 1) return; // Solo delegados
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const permiso = await Notification.requestPermission();
+        if (permiso !== "granted") return;
+        const res = await fetch(`${API}/push/vapid-public-key`);
+        const { key } = await res.json();
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: key,
+        });
+        await fetch(`${API}/push/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idUsuario: usuario.id, subscription: sub }),
+        });
+      } catch (_) {}
+    })();
+  }, [usuario]);
+
   const handleAceptar = async (id: number) => {
     await fetch(`${API}/asignacion/${id}/estado`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({estado:"aceptada"}) });
     setDetalle(null); setNav("pendientes"); cargarDefensas();

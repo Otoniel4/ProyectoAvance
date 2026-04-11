@@ -1,10 +1,17 @@
 require("dotenv").config({ path: require("path").join(__dirname, ".env") });
-const express = require("express");
-const mysql   = require("mysql2/promise");
-const cors    = require("cors");
-const multer  = require("multer");
-const path    = require("path");
-const fs      = require("fs");
+const express  = require("express");
+const mysql    = require("mysql2/promise");
+const cors     = require("cors");
+const multer   = require("multer");
+const path     = require("path");
+const fs       = require("fs");
+const webpush  = require("web-push");
+
+webpush.setVapidDetails(
+  "mailto:admin@colegiomarketing.com",
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 // ── Multer: almacenamiento de evidencias ───────────────────────
 const uploadsDir = path.join(__dirname, "uploads", "evidencias");
@@ -424,6 +431,22 @@ app.post("/api/defensas/:id/asignar", async (req, res) => {
         [id, idDelegado]
       );
     }
+    // Notificar al delegado
+    const [defensa] = await pool.query(
+      `SELECT pt.titulo, e.nombre AS nombreEstudiante, e.apellido AS apellidoEstudiante
+       FROM Defensa d
+       JOIN PerfilTesis pt ON d.idPerfil = pt.idPerfil
+       JOIN Estudiante e ON pt.idEstudiante = e.idEstudiante
+       WHERE d.idDefensa = ?`, [id]
+    );
+    if (defensa.length > 0) {
+      const d = defensa[0];
+      await notificarUsuario(
+        idDelegado,
+        "Nueva defensa asignada",
+        `${d.nombreEstudiante} ${d.apellidoEstudiante} - ${d.titulo}`
+      );
+    }
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
@@ -575,3 +598,45 @@ app.post("/api/reset-password", async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
+// ════════════════════════════════════════════════════════
+// NOTIFICACIONES PUSH
+// ════════════════════════════════════════════════════════
+
+// Clave pública VAPID para el frontend
+app.get("/api/push/vapid-public-key", (_req, res) => {
+  res.json({ key: process.env.VAPID_PUBLIC_KEY });
+});
+
+// Guardar suscripción de un dispositivo
+app.post("/api/push/subscribe", async (req, res) => {
+  const { idUsuario, subscription } = req.body;
+  if (!idUsuario || !subscription) return res.status(400).json({ ok: false });
+  const { endpoint, keys } = subscription;
+  try {
+    await pool.query(
+      `INSERT INTO PushSubscripcion (idUsuario, endpoint, p256dh, auth)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE p256dh = VALUES(p256dh), auth = VALUES(auth)`,
+      [idUsuario, endpoint, keys.p256dh, keys.auth]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Función interna para enviar push a un usuario
+async function notificarUsuario(idUsuario, titulo, cuerpo) {
+  try {
+    const [subs] = await pool.query(
+      "SELECT endpoint, p256dh, auth FROM PushSubscripcion WHERE idUsuario = ?",
+      [idUsuario]
+    );
+    for (const sub of subs) {
+      const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+      await webpush.sendNotification(pushSub, JSON.stringify({ titulo, cuerpo }))
+        .catch(() => {}); // Si falla (suscripción expirada) ignorar
+    }
+  } catch (_) {}
+}
