@@ -498,8 +498,16 @@ app.get("/api/admin/delegados/detalle", async (req, res) => {
 // ════════════════════════════════════════════════════════
 // RECUPERACION DE CONTRASEÑA (código de 6 dígitos)
 // ════════════════════════════════════════════════════════
-const { Resend } = require("resend");
-const resend = new Resend(process.env.RESEND_API_KEY);
+const nodemailer = require("nodemailer");
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
+  },
+});
 
 // ── Solicitar código de recuperación ──────────────────
 app.post("/api/recuperar-password", async (req, res) => {
@@ -526,8 +534,8 @@ app.post("/api/recuperar-password", async (req, res) => {
       [usuario.idUsuario, codigo, expira, codigo, expira]
     );
 
-    await resend.emails.send({
-      from: "Colegio de Marketing <onboarding@resend.dev>",
+    await transporter.sendMail({
+      from: '"Colegio de Marketing" <a7c73b001@smtp-brevo.com>',
       to: correo,
       subject: "Código de recuperación - Colegio de Marketing",
       html: `
