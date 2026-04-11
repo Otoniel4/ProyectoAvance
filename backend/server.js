@@ -498,15 +498,8 @@ app.get("/api/admin/delegados/detalle", async (req, res) => {
 // ════════════════════════════════════════════════════════
 // RECUPERACION DE CONTRASEÑA (código de 6 dígitos)
 // ════════════════════════════════════════════════════════
-const nodemailer = require("nodemailer");
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── Solicitar código de recuperación ──────────────────
 app.post("/api/recuperar-password", async (req, res) => {
@@ -533,8 +526,8 @@ app.post("/api/recuperar-password", async (req, res) => {
       [usuario.idUsuario, codigo, expira, codigo, expira]
     );
 
-    await transporter.sendMail({
-      from: `"Colegio de Marketing" <${process.env.EMAIL_USER}>`,
+    await resend.emails.send({
+      from: "Colegio de Marketing <onboarding@resend.dev>",
       to: correo,
       subject: "Código de recuperación - Colegio de Marketing",
       html: `
