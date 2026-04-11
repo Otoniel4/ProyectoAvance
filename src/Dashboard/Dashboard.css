@@ -314,7 +314,8 @@ body {
 
 /* ─── Table ──────────────────────────────────────────── */
 .table-wrap {
-  background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;
+  background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
 .table { width:100%; border-collapse:collapse; font-size:.85rem; }
 .table th {

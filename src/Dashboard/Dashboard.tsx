@@ -1579,6 +1579,15 @@ export default function Dashboard({ usuario, onLogout }: DashboardProps) {
         case "admin_dashboard":    return <VistaAdminDashboard defensas={defensas} onNav={handleNav}/>;
         case "admin_delegados":    return <VistaAdminDelegados/>;
         case "admin_pagos":        return <VistaAdminPagos/>;
+        case "admin_invitaciones": return (
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:12}}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="#9aa5b4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            <p style={{fontSize:"1.1rem",fontWeight:700,color:"#4a5568"}}>En desarrollo</p>
+            <p style={{fontSize:".9rem",color:"#9aa5b4"}}>Esta sección estará disponible próximamente.</p>
+          </div>
+        );
         case "admin_crear":        return <VistaAdminCrearDefensa onBack={() => setNav("admin_defensas")} onCreada={() => { cargarDefensas(); setNav("admin_defensas"); }}/>;
         case "admin_defensas":
         default:
