@@ -1470,37 +1470,60 @@ function AdminSidebar({ usuario, active, onChange, onLogout }: {
 }) {
   const items = [
     { key:"admin_dashboard",    label:"Dashboard",            ico: icons.home },
-    { key:"admin_defensas",     label:"Gestión de Defensas",  ico: icons.doc },
-    { key:"admin_delegados",    label:"Gestión de Delegados", ico: icons.users },
+    { key:"admin_defensas",     label:"Defensas",             ico: icons.doc },
+    { key:"admin_delegados",    label:"Delegados",            ico: icons.users },
     { key:"admin_invitaciones", label:"Invitaciones",         ico: icons.mail },
-    { key:"admin_pagos",        label:"Pagos Pendientes",     ico: icons.dollar },
+    { key:"admin_pagos",        label:"Pagos",                ico: icons.dollar },
   ];
   return (
-    <aside className="admin-sidebar">
-      <div className="admin-brand">
-        <div className="admin-brand__title">Colegio de Marketing</div>
-        <div className="admin-brand__sub">Panel Administrador</div>
-      </div>
-      <div className="admin-menu">
+    <>
+      {/* Sidebar escritorio */}
+      <aside className="admin-sidebar">
+        <div className="admin-brand">
+          <div className="admin-brand__title">Colegio de Marketing</div>
+          <div className="admin-brand__sub">Panel Administrador</div>
+        </div>
+        <div className="admin-menu">
+          {items.map(it => (
+            <button key={it.key} type="button"
+              className={`admin-menu__item ${active === it.key ? "admin-menu__item--active" : ""}`}
+              onClick={() => onChange(it.key)}>
+              <span className="admin-menu__ico"><Ico d={it.ico} size={16}/></span>
+              {it.label}
+            </button>
+          ))}
+        </div>
+        <div className="admin-user">
+          <div className="admin-user__avatar">{usuario.nombre?.[0]}{usuario.apellido?.[0]}</div>
+          <div>
+            <div className="admin-user__name">{usuario.nombre} {usuario.apellido}</div>
+          </div>
+        </div>
+        <button className="admin-logout" onClick={onLogout} type="button">
+          <Ico d={icons.logout} size={18}/> Cerrar sesión
+        </button>
+      </aside>
+
+      {/* Top bar móvil */}
+      <header className="mobile-topbar">
+        <div className="mobile-topbar__brand">Colegio de Marketing</div>
+        <div className="mobile-topbar__avatar" onClick={onLogout} title="Cerrar sesión">
+          {usuario.nombre?.[0]}{usuario.apellido?.[0]}
+        </div>
+      </header>
+
+      {/* Bottom nav móvil */}
+      <nav className="mobile-bottom-nav">
         {items.map(it => (
           <button key={it.key} type="button"
-            className={`admin-menu__item ${active === it.key ? "admin-menu__item--active" : ""}`}
+            className={`mobile-bottom-nav__item ${active === it.key ? "mobile-bottom-nav__item--active" : ""}`}
             onClick={() => onChange(it.key)}>
-            <span className="admin-menu__ico"><Ico d={it.ico} size={16}/></span>
-            {it.label}
+            <Ico d={it.ico} size={20}/>
+            <span>{it.label}</span>
           </button>
         ))}
-      </div>
-      <div className="admin-user">
-        <div className="admin-user__avatar">{usuario.nombre?.[0]}{usuario.apellido?.[0]}</div>
-        <div>
-          <div className="admin-user__name">{usuario.nombre} {usuario.apellido}</div>
-        </div>
-      </div>
-      <button className="admin-logout" onClick={onLogout} type="button">
-        <Ico d={icons.logout} size={18}/> Cerrar sesión
-      </button>
-    </aside>
+      </nav>
+    </>
   );
 }
 
@@ -1565,7 +1588,7 @@ export default function Dashboard({ usuario, onLogout }: DashboardProps) {
     return (
       <div className="admin-shell">
         <AdminSidebar usuario={usuario} active={nav} onChange={handleNav} onLogout={onLogout}/>
-        <div className="admin-content">{renderAdmin()}</div>
+        <div className="admin-content" style={{minWidth:0}}>{renderAdmin()}</div>
       </div>
     );
   }
