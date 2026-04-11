@@ -498,16 +498,25 @@ app.get("/api/admin/delegados/detalle", async (req, res) => {
 // ════════════════════════════════════════════════════════
 // RECUPERACION DE CONTRASEÑA (código de 6 dígitos)
 // ════════════════════════════════════════════════════════
-const nodemailer = require("nodemailer");
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-});
+async function sendEmail({ to, subject, html }) {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": process.env.BREVO_PASS,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: "Colegio de Marketing", email: "a7c73b001@smtp-brevo.com" },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Brevo error: ${err}`);
+  }
+}
 
 // ── Solicitar código de recuperación ──────────────────
 app.post("/api/recuperar-password", async (req, res) => {
@@ -534,8 +543,7 @@ app.post("/api/recuperar-password", async (req, res) => {
       [usuario.idUsuario, codigo, expira, codigo, expira]
     );
 
-    await transporter.sendMail({
-      from: '"Colegio de Marketing" <a7c73b001@smtp-brevo.com>',
+    await sendEmail({
       to: correo,
       subject: "Código de recuperación - Colegio de Marketing",
       html: `
