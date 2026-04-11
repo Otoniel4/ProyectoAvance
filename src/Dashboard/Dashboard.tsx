@@ -1540,7 +1540,7 @@ export default function Dashboard({ usuario, onLogout }: DashboardProps) {
 
   const cargarDefensas = () => {
     setLoading(true);
-    const url = usuario.rol === 0 ? `${API}/admin/defensas` : `${API}/defensas/${usuario.id}`;
+    const url = usuario.rol === 0 ? `${API}/defensas/admin` : `${API}/defensas/${usuario.id}`;
     fetch(url).then(r=>r.json()).then(d => { if(d.ok) setDefensas(d.defensas); }).catch(console.error).finally(() => setLoading(false));
   };
 
