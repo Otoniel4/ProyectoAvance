@@ -498,27 +498,9 @@ app.get("/api/admin/delegados/detalle", async (req, res) => {
 // ════════════════════════════════════════════════════════
 // RECUPERACION DE CONTRASEÑA (código de 6 dígitos)
 // ════════════════════════════════════════════════════════
-async function sendEmail({ to, subject, html }) {
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "api-key": process.env.BREVO_PASS,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: { name: "Colegio de Marketing", email: "a7c73b001@smtp-brevo.com" },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Brevo error: ${err}`);
-  }
-}
 
 // ── Solicitar código de recuperación ──────────────────
+// El backend genera y guarda el código; el frontend lo envía por EmailJS
 app.post("/api/recuperar-password", async (req, res) => {
   const { correo } = req.body;
   if (!correo) return res.status(400).json({ ok: false, mensaje: "Correo requerido" });
@@ -530,11 +512,11 @@ app.post("/api/recuperar-password", async (req, res) => {
     );
 
     if (rows.length === 0)
-      return res.json({ ok: true });
+      return res.json({ ok: true, codigo: null, nombre: null });
 
     const usuario = rows[0];
     const codigo  = Math.floor(100000 + Math.random() * 900000).toString();
-    const expira  = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+    const expira  = new Date(Date.now() + 15 * 60 * 1000);
 
     await pool.query(
       `INSERT INTO ResetPassword (idUsuario, token, expira, usado)
@@ -543,38 +525,7 @@ app.post("/api/recuperar-password", async (req, res) => {
       [usuario.idUsuario, codigo, expira, codigo, expira]
     );
 
-    await sendEmail({
-      to: correo,
-      subject: "Código de recuperación - Colegio de Marketing",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
-          <div style="background: #1d3d6b; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h2 style="color: white; margin: 0;">Colegio de Marketing</h2>
-            <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0;">Sistema de Gestión de Defensas de Tesis</p>
-          </div>
-          <div style="background: #f8f9fb; padding: 28px; border-radius: 0 0 12px 12px; border: 1px solid #e8ecf2;">
-            <p style="color: #1a202c; font-size: 15px;">Hola <strong>${usuario.nombre}</strong>,</p>
-            <p style="color: #4a5568; font-size: 14px; line-height: 1.6;">
-              Recibimos una solicitud para restablecer tu contraseña.<br/>
-              Ingresa el siguiente código en la aplicación:
-            </p>
-            <div style="text-align: center; margin: 28px 0;">
-              <span style="background: #1d3d6b; color: white; padding: 16px 40px;
-                           border-radius: 10px; font-size: 32px; font-weight: bold;
-                           letter-spacing: 10px; display: inline-block;">
-                ${codigo}
-              </span>
-            </div>
-            <p style="color: #9aa5b4; font-size: 12px; text-align: center;">
-              Este código expira en <strong>15 minutos</strong>.<br/>
-              Si no solicitaste esto, ignora este correo.
-            </p>
-          </div>
-        </div>
-      `,
-    });
-
-    res.json({ ok: true });
+    res.json({ ok: true, codigo, nombre: usuario.nombre });
   } catch (err) {
     console.error(err);
     res.status(500).json({ ok: false, error: err.message });

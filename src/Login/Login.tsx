@@ -1,5 +1,10 @@
 import { useState } from "react";
+import emailjs from "@emailjs/browser";
 import "./Login.css";
+
+const EMAILJS_SERVICE  = "service_67n6qcp";
+const EMAILJS_TEMPLATE = "template_1t5goa6";
+const EMAILJS_KEY      = "aDSwPl0C938DOm5FV";
 
 interface Usuario {
   id: number;
@@ -62,6 +67,14 @@ export default function Login({ onLogin }: LoginProps) {
       });
       const data = await res.json();
       if (data.ok) {
+        if (data.codigo) {
+          await emailjs.send(
+            EMAILJS_SERVICE,
+            EMAILJS_TEMPLATE,
+            { to_email: correo, nombre: data.nombre, codigo: data.codigo },
+            EMAILJS_KEY
+          );
+        }
         setVista("codigo");
         setMsg("");
       } else {
