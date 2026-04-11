@@ -91,6 +91,32 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// ── Todas las defensas (Admin) — debe ir ANTES de /:idDelegado ──
+app.get("/api/defensas/admin", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         d.idDefensa, d.fecha, d.lugar, d.estado,
+         d.direccion, d.enlaceGoogleMaps, d.observaciones,
+         pt.titulo,
+         e.nombre AS nombreEstudiante, e.apellido AS apellidoEstudiante,
+         ad.idAsignacion, ad.estado AS estadoAsignacion,
+         u.nombre AS nombreDelegado, u.apellido AS apellidoDelegado,
+         p.estado AS estadoPago
+       FROM Defensa d
+       JOIN PerfilTesis pt ON d.idPerfil = pt.idPerfil
+       JOIN Estudiante e ON pt.idEstudiante = e.idEstudiante
+       LEFT JOIN AsignacionDelegado ad ON d.idDefensa = ad.idDefensa
+       LEFT JOIN Usuario u ON ad.idDelegado = u.idUsuario
+       LEFT JOIN Pago p ON d.idDefensa = p.idDefensa
+       ORDER BY d.fecha DESC`
+    );
+    res.json({ ok: true, defensas: rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── Defensas asignadas al delegado ─────────────────────────────
 app.get("/api/defensas/:idDelegado", async (req, res) => {
   const { idDelegado } = req.params;
@@ -101,11 +127,13 @@ app.get("/api/defensas/:idDelegado", async (req, res) => {
          d.fecha,
          d.lugar,
          d.estado,
-         d.idAsignacion,
+         d.direccion,
+         d.enlaceGoogleMaps,
+         d.observaciones,
          pt.titulo,
          e.nombre        AS nombreEstudiante,
          e.apellido      AS apellidoEstudiante,
-         ad.idAsignacion AS idAsignacion,
+         ad.idAsignacion,
          ad.estado       AS estadoAsignacion,
          p.estado        AS estadoPago
        FROM AsignacionDelegado ad
@@ -366,32 +394,6 @@ app.post("/api/defensas", async (req, res) => {
     );
 
     res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// ── GET defensas con delegado asignado (Admin) ─────────
-// Reemplaza el endpoint GET /api/defensas existente con uno mejorado
-app.get("/api/defensas/admin", async (req, res) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT
-         d.idDefensa, d.fecha, d.lugar, d.estado,
-         pt.titulo,
-         e.nombre AS nombreEstudiante, e.apellido AS apellidoEstudiante,
-         ad.idAsignacion, ad.estado AS estadoAsignacion,
-         u.nombre AS nombreDelegado, u.apellido AS apellidoDelegado,
-         p.estado AS estadoPago
-       FROM Defensa d
-       JOIN PerfilTesis pt ON d.idPerfil = pt.idPerfil
-       JOIN Estudiante e ON pt.idEstudiante = e.idEstudiante
-       LEFT JOIN AsignacionDelegado ad ON d.idDefensa = ad.idDefensa
-       LEFT JOIN Usuario u ON ad.idDelegado = u.idUsuario
-       LEFT JOIN Pago p ON d.idDefensa = p.idDefensa
-       ORDER BY d.fecha DESC`
-    );
-    res.json({ ok: true, defensas: rows });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
