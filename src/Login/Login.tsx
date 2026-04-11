@@ -30,7 +30,7 @@ export default function Login({ onLogin }: LoginProps) {
   const [nuevaPass, setNuevaPass]     = useState("");
   const [confirmaPass, setConfirmaPass] = useState("");
 
-  const apiBase = `http://${window.location.hostname}:5000/api`;
+  const apiBase = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:5000/api`;
 
   // ── Login ──────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {

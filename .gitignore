@@ -26,3 +26,6 @@ yarn-error.log*
 backend/.env
 backend/node_modules
 backend/uploads
+
+# frontend env
+.env.production
