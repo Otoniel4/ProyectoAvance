@@ -671,6 +671,40 @@ app.post("/api/push/test/:idUsuario", async (req, res) => {
   }
 });
 
+// ── Notificaciones in-app ──────────────────────────────
+app.get("/api/notificaciones/:idUsuario", async (req, res) => {
+  const { idUsuario } = req.params;
+  try {
+    const [rows] = await pool.query(
+      "SELECT idNotificacion, titulo, mensaje, leida, fecha FROM Notificacion WHERE idUsuario = ? ORDER BY fecha DESC LIMIT 50",
+      [idUsuario]
+    );
+    res.json({ ok: true, notificaciones: rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.put("/api/notificaciones/leer-todas/:idUsuario", async (req, res) => {
+  const { idUsuario } = req.params;
+  try {
+    await pool.query("UPDATE Notificacion SET leida = 1 WHERE idUsuario = ?", [idUsuario]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.put("/api/notificaciones/:id/leer", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("UPDATE Notificacion SET leida = 1 WHERE idNotificacion = ?", [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Función interna para enviar push + guardar notificación in-app
 async function notificarUsuario(idUsuario, titulo, cuerpo) {
   try {
