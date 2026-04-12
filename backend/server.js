@@ -7,6 +7,11 @@ const path     = require("path");
 const fs       = require("fs");
 const webpush  = require("web-push");
 
+if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  console.error("[VAPID] ERROR: claves no configuradas en variables de entorno");
+} else {
+  console.log("[VAPID] Claves cargadas OK. Public:", process.env.VAPID_PUBLIC_KEY.slice(0, 20) + "...");
+}
 webpush.setVapidDetails(
   "mailto:admin@colegiomarketing.com",
   process.env.VAPID_PUBLIC_KEY,
@@ -614,29 +619,89 @@ app.post("/api/push/subscribe", async (req, res) => {
   if (!idUsuario || !subscription) return res.status(400).json({ ok: false });
   const { endpoint, keys } = subscription;
   try {
+    // Borrar todas las suscripciones previas del usuario y registrar la nueva
+    await pool.query("DELETE FROM SuscripcionPush WHERE idUsuario = ?", [idUsuario]);
     await pool.query(
-      `INSERT INTO PushSubscripcion (idUsuario, endpoint, p256dh, auth)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE p256dh = VALUES(p256dh), auth = VALUES(auth)`,
+      "INSERT INTO SuscripcionPush (idUsuario, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)",
       [idUsuario, endpoint, keys.p256dh, keys.auth]
     );
+    console.log(`[Push] Suscripción registrada para usuario ${idUsuario}`);
     res.json({ ok: true });
+  } catch (err) {
+    console.error(`[Push] Error al guardar suscripción:`, err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Ver suscripciones guardadas (debug)
+app.get("/api/push/subs/:idUsuario", async (req, res) => {
+  const { idUsuario } = req.params;
+  const [subs] = await pool.query(
+    "SELECT idSuscripcion, endpoint, fechaRegistro FROM SuscripcionPush WHERE idUsuario = ?",
+    [idUsuario]
+  );
+  res.json({ ok: true, total: subs.length, subs });
+});
+
+// Enviar push de prueba manualmente (debug)
+app.post("/api/push/test/:idUsuario", async (req, res) => {
+  const { idUsuario } = req.params;
+  try {
+    const [subs] = await pool.query(
+      "SELECT endpoint, p256dh, auth FROM SuscripcionPush WHERE idUsuario = ?",
+      [idUsuario]
+    );
+    if (subs.length === 0) return res.json({ ok: false, msg: "Sin suscripciones para este usuario" });
+    const resultados = [];
+    for (const sub of subs) {
+      const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+      try {
+        await webpush.sendNotification(pushSub, JSON.stringify({ titulo: "Prueba Push", cuerpo: "Si ves esto, el push funciona" }), { urgency: "high", TTL: 60 });
+        resultados.push({ endpoint: sub.endpoint.slice(0, 40), resultado: "OK" });
+      } catch (e) {
+        resultados.push({ endpoint: sub.endpoint.slice(0, 40), resultado: `ERROR ${e.statusCode}: ${e.message}` });
+        if (e.statusCode === 410 || e.statusCode === 404) {
+          await pool.query("DELETE FROM SuscripcionPush WHERE endpoint = ?", [sub.endpoint]).catch(() => {});
+        }
+      }
+    }
+    res.json({ ok: true, resultados });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// Función interna para enviar push a un usuario
+// Función interna para enviar push + guardar notificación in-app
 async function notificarUsuario(idUsuario, titulo, cuerpo) {
   try {
+    await pool.query(
+      "INSERT INTO Notificacion (idUsuario, titulo, mensaje) VALUES (?, ?, ?)",
+      [idUsuario, titulo, cuerpo]
+    );
+    console.log(`[Notif] Guardada para usuario ${idUsuario}: ${titulo}`);
+  } catch (err) {
+    console.error(`[Notif] Error al guardar en BD:`, err.message);
+  }
+  try {
     const [subs] = await pool.query(
-      "SELECT endpoint, p256dh, auth FROM PushSubscripcion WHERE idUsuario = ?",
+      "SELECT endpoint, p256dh, auth FROM SuscripcionPush WHERE idUsuario = ?",
       [idUsuario]
     );
+    console.log(`[Push] ${subs.length} suscripcion(es) para usuario ${idUsuario}`);
     for (const sub of subs) {
       const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
-      await webpush.sendNotification(pushSub, JSON.stringify({ titulo, cuerpo }))
-        .catch(() => {}); // Si falla (suscripción expirada) ignorar
+      try {
+        await webpush.sendNotification(pushSub, JSON.stringify({ titulo, cuerpo }), { urgency: "high", TTL: 60 });
+        console.log(`[Push] Enviado OK a ${sub.endpoint.slice(0, 40)}`);
+      } catch (e) {
+        console.error(`[Push] Error ${e.statusCode} para usuario ${idUsuario}: ${e.message}`);
+        if (e.statusCode === 410 || e.statusCode === 404) {
+          await pool.query("DELETE FROM SuscripcionPush WHERE endpoint = ?", [sub.endpoint]).catch(() => {});
+          console.log(`[Push] Suscripción expirada eliminada`);
+        }
+      }
     }
-  } catch (_) {}
+  } catch (err) {
+    console.error(`[Push] Error consultando suscripciones:`, err.message);
+  }
 }
