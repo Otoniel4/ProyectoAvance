@@ -619,8 +619,8 @@ app.post("/api/push/subscribe", async (req, res) => {
   if (!idUsuario || !subscription) return res.status(400).json({ ok: false });
   const { endpoint, keys } = subscription;
   try {
-    // Borrar todas las suscripciones previas del usuario y registrar la nueva
-    await pool.query("DELETE FROM SuscripcionPush WHERE idUsuario = ?", [idUsuario]);
+    // Eliminar solo este endpoint si ya existía (no borrar los demás contextos del usuario)
+    await pool.query("DELETE FROM SuscripcionPush WHERE endpoint = ?", [endpoint]);
     await pool.query(
       "INSERT INTO SuscripcionPush (idUsuario, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)",
       [idUsuario, endpoint, keys.p256dh, keys.auth]
